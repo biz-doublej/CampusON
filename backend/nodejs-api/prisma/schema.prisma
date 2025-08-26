@@ -1,0 +1,168 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id String @id @default(cuid())
+  user_id String @unique // 학번/교직원번호
+  name String
+  email String @unique
+  password String
+  role Role @default(STUDENT)
+  department Department?
+  profile_image String?
+  year Int? // 학년 (학생의 경우)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  assignments Assignment[]
+  test_results TestResult[]
+  activities Activity[]
+  clinical_records ClinicalRecord[] // 임상 실습 기록
+  practical_hours PracticalHour[] // 실습 시간 기록
+
+  @@map("users")
+}
+
+model Assignment {
+  id String @id @default(cuid())
+  title String
+  description String
+  due_date DateTime
+  status AssignmentStatus @default(DRAFT)
+  created_by String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  creator User @relation(fields: [created_by], references: [id])
+  questions Question[]
+  test_results TestResult[]
+
+  @@map("assignments")
+}
+
+model Question {
+  id String @id @default(cuid())
+  assignment_id String
+  title String
+  content String
+  options Json? // Array of options for multiple choice
+  correct_answer String?
+  explanation String?
+  category String
+  difficulty Int @default(1)
+  created_at DateTime @default(now())
+
+  // Relations
+  assignment Assignment @relation(fields: [assignment_id], references: [id], onDelete: Cascade)
+
+  @@map("questions")
+}
+
+model TestResult {
+  id String @id @default(cuid())
+  user_id String
+  assignment_id String
+  score Float
+  total_questions Int
+  correct_answers Int
+  time_spent Int // in seconds
+  completed_at DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [user_id], references: [id])
+  assignment Assignment @relation(fields: [assignment_id], references: [id])
+
+  @@map("test_results")
+}
+
+model Activity {
+  id String @id @default(cuid())
+  user_id String
+  type ActivityType
+  title String
+  description String
+  timestamp DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [user_id], references: [id])
+
+  @@map("activities")
+}
+
+// 학과별 임상 실습 기록
+model ClinicalRecord {
+  id String @id @default(cuid())
+  user_id String
+  department Department
+  patient_id String?
+  procedure_type String
+  description String
+  supervisor String?
+  score Float?
+  feedback String?
+  date DateTime
+  created_at DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [user_id], references: [id])
+
+  @@map("clinical_records")
+}
+
+// 실습 시간 기록
+model PracticalHour {
+  id String @id @default(cuid())
+  user_id String
+  department Department
+  category String // 예: "임상실습", "시뮬레이션", "실습실 실습" 등
+  hours Float
+  description String?
+  supervisor String?
+  date DateTime
+  created_at DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [user_id], references: [id])
+
+  @@map("practical_hours")
+}
+
+enum Role {
+  STUDENT
+  PROFESSOR
+  ADMIN
+}
+
+enum Department {
+  NURSING
+  DENTAL_HYGIENE
+  PHYSICAL_THERAPY
+}
+
+enum AssignmentStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+}
+
+enum ActivityType {
+  ASSIGNMENT
+  TEST
+  GRADE
+  LOGIN
+  UPLOAD
+  CLINICAL_PRACTICE
+  SIMULATION
+  PRACTICAL_TRAINING
+}

@@ -1,0 +1,443 @@
+/**
+ * 🌟 Apple Liquid Glass UI 공법 CSS
+ * Glassmorphism + Apple Design Language
+ */
+
+.liquid-glass-notification {
+  position: relative;
+  width: 400px;
+  max-width: 90vw;
+  margin: 12px;
+  padding: 0;
+  overflow: hidden;
+  
+  /* 초기 상태 (숨김) */
+  opacity: 0;
+  transform: translateX(100%) scale(0.8);
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  
+  /* Apple 그림자 스타일 */
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.07));
+}
+
+.liquid-glass-notification.visible {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+}
+
+.liquid-glass-notification:hover {
+  transition: all 0.2s ease-out;
+}
+
+/* 우선순위별 특수 효과 */
+.liquid-glass-notification.priority-긴급,
+.liquid-glass-notification.priority-치명적 {
+  animation: subtle-pulse 2s ease-in-out infinite;
+}
+
+@keyframes subtle-pulse {
+  0%, 100% { 
+    transform: scale(1); 
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.07));
+  }
+  50% { 
+    transform: scale(1.01); 
+    filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.12));
+  }
+}
+
+/* 펄스 애니메이션 배경 */
+.pulse-animation {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  border-radius: 50%;
+  opacity: 0.3;
+  animation: pulse-expand 3s ease-out infinite;
+  pointer-events: none;
+  z-index: -1;
+}
+
+@keyframes pulse-expand {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.4;
+  }
+  70% {
+    transform: scale(1.2);
+    opacity: 0.1;
+  }
+  100% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+
+/* 내용 영역 */
+.notification-content {
+  padding: 20px;
+  position: relative;
+  z-index: 1;
+}
+
+/* 헤더 영역 */
+.notification-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.department-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.department-icon {
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease;
+}
+
+.department-icon:hover {
+  transform: scale(1.05);
+}
+
+.notification-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 4px 0;
+  line-height: 1.4;
+  
+  /* Apple 타이포그래피 */
+  letter-spacing: -0.01em;
+}
+
+.notification-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.4;
+  font-weight: 400;
+}
+
+.notification-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.priority-badge {
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  backdrop-filter: blur(8px);
+}
+
+.close-button {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: rgba(0, 0, 0, 0.1);
+  color: #6b7280;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
+}
+
+.close-button:hover {
+  background: rgba(0, 0, 0, 0.15);
+  color: #374151;
+  transform: scale(1.1);
+}
+
+/* 메시지 영역 */
+.notification-message {
+  margin-bottom: 16px;
+}
+
+.notification-message p {
+  margin: 0;
+  font-size: 14px;
+  color: #374151;
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+/* 진단 정보 */
+.diagnosis-info {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(8px);
+}
+
+.diagnosis-metrics {
+  display: flex;
+  gap: 16px;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+
+.metric-label {
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.metric-value {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  
+  /* Apple 숫자 스타일 */
+  font-variant-numeric: tabular-nums;
+}
+
+/* 혼란 감지 정보 */
+.confusion-info {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 12px;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  backdrop-filter: blur(8px);
+}
+
+.confusion-indicators {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.confusion-indicator {
+  padding: 4px 8px;
+  background: rgba(239, 68, 68, 0.15);
+  color: #dc2626;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* 액션 버튼들 */
+.notification-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.action-button {
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  
+  /* Apple 버튼 기본 스타일 */
+  letter-spacing: -0.01em;
+}
+
+.action-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.action-button:active {
+  transform: translateY(0);
+}
+
+.action-button.urgent {
+  animation: button-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes button-pulse {
+  0%, 100% { 
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+  }
+  50% { 
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1);
+  }
+}
+
+.action-icon {
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+}
+
+/* 푸터 */
+.notification-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.timestamp {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.requires-interaction {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #f59e0b;
+  font-weight: 600;
+  animation: gentle-glow 2s ease-in-out infinite;
+}
+
+@keyframes gentle-glow {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
+}
+
+/* 반응형 디자인 */
+@media (max-width: 480px) {
+  .liquid-glass-notification {
+    width: calc(100vw - 24px);
+    margin: 8px 12px;
+  }
+  
+  .notification-content {
+    padding: 16px;
+  }
+  
+  .department-info {
+    gap: 8px;
+  }
+  
+  .department-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+  }
+  
+  .notification-title {
+    font-size: 15px;
+  }
+  
+  .notification-subtitle {
+    font-size: 13px;
+  }
+  
+  .notification-actions {
+    flex-direction: column;
+  }
+  
+  .action-button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* 다크모드 지원 */
+@media (prefers-color-scheme: dark) {
+  .notification-title {
+    color: #f9fafb;
+  }
+  
+  .notification-subtitle {
+    color: #d1d5db;
+  }
+  
+  .notification-message p {
+    color: #e5e7eb;
+  }
+  
+  .metric-label {
+    color: #9ca3af;
+  }
+  
+  .timestamp {
+    color: #6b7280;
+  }
+  
+  .close-button {
+    background: rgba(255, 255, 255, 0.1);
+    color: #d1d5db;
+  }
+  
+  .close-button:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #f3f4f6;
+  }
+}
+
+/* 접근성 개선 */
+@media (prefers-reduced-motion: reduce) {
+  .liquid-glass-notification,
+  .department-icon,
+  .action-button,
+  .close-button {
+    transition: none;
+  }
+  
+  .liquid-glass-notification.priority-긴급,
+  .liquid-glass-notification.priority-치명적 {
+    animation: none;
+  }
+  
+  .pulse-animation {
+    animation: none;
+  }
+  
+  .action-button.urgent {
+    animation: none;
+  }
+  
+  .requires-interaction {
+    animation: none;
+  }
+}
+
+/* 고대비 모드 지원 */
+@media (prefers-contrast: high) {
+  .liquid-glass-notification {
+    border: 2px solid #000;
+  }
+  
+  .priority-badge {
+    border-width: 2px;
+  }
+  
+  .action-button {
+    border-width: 2px;
+  }
+} 

@@ -1,0 +1,69 @@
+---
+alwaysApply: false
+---
+# Cursor Rules - Compact Guidelines
+
+## 🔍 Essential Process Before Work
+
+### Step 1: Project Structure Analysis
+- Identify project type, tech stack, directory structure
+- Analyze existing code style and patterns
+- Check dependencies and configuration files
+
+### Step 2: Work Plan Briefing (Mandatory)
+```markdown
+## 📋 Work Plan Briefing
+### Project Status
+- Project Type: [Analysis Results]
+- Tech Stack: [Identified Technologies]
+
+### Request Analysis
+- Work Content: [Request Summary]
+- Impact Scope: [Files to be Modified/Added]
+
+### Work Plan
+1. [Step-by-step work plan]
+
+**Will start work after approval.**
+````
+
+## 🛠️ Code Writing Principles
+
+* **Concise and clean code** - Remove unnecessary complexity
+* **Follow project flow** - Develop according to existing architecture
+* **Prioritize function reuse** - Minimize new function creation, reuse existing ones
+* **Consistent code style** - Strictly follow project conventions
+* **Documentation comments required** - Add descriptions to all major components/functions
+* Consider error handling and exception management
+
+## 📝 Work Completion Report
+
+```markdown
+## ✅ Work Completion Report
+### Work Performed: [Actual work content]
+### Changed Files: [List of modified/added/deleted files]
+### Key Changes: [Summary of core changes]
+### Verification Items: [Items requiring confirmation]
+```
+
+## ⚠️ Precautions
+
+* **Never start work without approval**
+* **Write concise and clean code**
+* **Follow project architecture and prioritize function reuse**
+* **Maintain strict code style consistency**
+* **Document all major components/functions**
+
+## 🌐 Language Requirements
+
+* **All communications, responses, and documentation in Korean**
+* Code itself (variable names, function names) follows existing project conventions
+* Technical terms may use English if commonly accepted in Korean dev environment
+
+---
+
+**Following these rules for systematic and safe development work, communicating in Korean.**
+
+```
+::contentReference[oaicite:0]{index=0}
+```

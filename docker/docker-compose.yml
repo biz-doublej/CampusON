@@ -1,0 +1,94 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 데이터베이스 (일반형 SQL)
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: kb_learning_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: kb_learning_db
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./2025_backend/init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - kb_learning_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d kb_learning_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Qdrant 벡터 데이터베이스 (RAG 및 AI SQL)
+  qdrant:
+    image: qdrant/qdrant:v1.7.0
+    container_name: kb_learning_qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"  # REST API
+      - "6334:6334"  # gRPC API (선택사항)
+    volumes:
+      - qdrant_data:/qdrant/storage
+    environment:
+      QDRANT__SERVICE__HTTP_PORT: 6333
+      QDRANT__SERVICE__GRPC_PORT: 6334
+    networks:
+      - kb_learning_network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:6333/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis (캐싱)
+  redis:
+    image: redis:7-alpine
+    container_name: kb_learning_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - kb_learning_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 웹 서버 (Nginx 리버스 프록시)
+  nginx:
+    image: nginx:alpine
+    container_name: kb_learning_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/ssl:ro  # SSL 인증서 폴더 (나중에 사용)
+    depends_on:
+      - postgres
+      - qdrant
+      - redis
+    restart: unless-stopped
+    networks:
+      - kb_learning_network
+
+volumes:
+  postgres_data:
+    driver: local
+  qdrant_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  kb_learning_network:
+    driver: bridge 

@@ -1,0 +1,15 @@
+.vercel
+*.db
+*.sqlite
+*.sqlite3
+.env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+data/test_*.txt
+run_*.py
