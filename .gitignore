@@ -235,3 +235,8 @@ logs/
 # Project data/artifacts (generated)
 backend/python-api/app.db
 backend/python-api/app/data/faiss/*
+
+# Virtualenvs
+.venv/
+**/.venv/
+backend/python-api/.venv/
