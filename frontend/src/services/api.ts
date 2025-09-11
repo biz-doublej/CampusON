@@ -87,7 +87,115 @@ export const dashboardAPI = {
   },
 };
 
+// v2 Dashboard API with dynamic stats
+export const dashboardAPIV2 = {
+  getStats: async (): Promise<ApiResponse<any>> => {
+    try {
+      const response = await api.get('/api/dashboard/v2/stats');
+      return response.data;
+    } catch (e) {
+      const response = await api.get('/api/dashboard/stats');
+      return response.data;
+    }
+  },
+  getActivities: async (): Promise<ApiResponse<any[]>> => {
+    try {
+      const response = await api.get('/api/dashboard/v2/activities');
+      return response.data;
+    } catch (e) {
+      const response = await api.get('/api/dashboard/activities');
+      return response.data;
+    }
+  },
+};
+
+// Users API
+export const usersAPI = {
+  // List students by department (department key: 'nursing' | 'dental_hygiene' | 'physical_therapy')
+  getStudents: async (department?: string): Promise<ApiResponse<any[]>> => {
+    const params = department ? { department } : undefined;
+    const response = await api.get('/api/users/students', { params });
+    return response.data;
+  },
+  // Get user detail
+  getUser: async (userId: string): Promise<ApiResponse<any>> => {
+    const response = await api.get(`/api/users/${userId}`);
+    return response.data;
+  },
+  // Get user grades
+  getUserGrades: async (userId: string): Promise<ApiResponse<any[]>> => {
+    const response = await api.get(`/api/users/${userId}/grades`);
+    return response.data;
+  },
+};
+
+// Admin API
+export const adminAPI = {
+  getStats: async (): Promise<ApiResponse<any>> => {
+    const response = await api.get('/api/admin/stats');
+    return response.data;
+  },
+  getMonitor: async (): Promise<ApiResponse<any>> => {
+    const response = await api.get('/api/admin/monitor');
+    return response.data;
+  },
+  getSettings: async (): Promise<ApiResponse<any>> => {
+    const response = await api.get('/api/admin/settings');
+    return response.data;
+  },
+  updateSettings: async (payload: any): Promise<ApiResponse<any>> => {
+    const response = await api.put('/api/admin/settings', payload);
+    return response.data;
+  },
+  listUsers: async (params?: { role?: string; department?: string; q?: string }): Promise<ApiResponse<any[]>> => {
+    const response = await api.get('/api/admin/users', { params });
+    return response.data;
+  },
+  getReports: async (): Promise<ApiResponse<any>> => {
+    const response = await api.get('/api/admin/reports');
+    return response.data;
+  },
+};
+
+// Students API
+export const studentsAPI = {
+  getMyPracticeHours: async (): Promise<ApiResponse<{ total_hours: number }>> => {
+    const response = await api.get('/api/students/me/practice-hours');
+    return response.data;
+  },
+};
+
 // 유틸리티 함수들
+
+// Assignments API
+export const assignmentsAPI = {
+  // List assignments (server filters by role)
+  list: async (): Promise<ApiResponse<any[]>> => {
+    const response = await api.get('/api/assignments');
+    return response.data;
+  },
+  // Create assignment (professor)
+  create: async (payload: { title: string; description: string; due_date: string; status?: 'draft' | 'published' }): Promise<ApiResponse<any>> => {
+    const response = await api.post('/api/assignments', payload);
+    return response.data;
+  },
+  // Get assignment detail
+  get: async (id: string): Promise<ApiResponse<any>> => {
+    const response = await api.get(`/api/assignments/${id}`);
+    return response.data;
+  },
+  // Update status
+  updateStatus: async (id: string, status: 'draft' | 'published' | 'closed'): Promise<ApiResponse<any>> => {
+    const response = await api.patch(`/api/assignments/${id}/status`, { status });
+    return response.data;
+  },
+  // Submit upload metadata
+  submit: async (id: string, payload: { note?: string; url?: string }): Promise<ApiResponse<any>> => {
+    const response = await api.post(`/api/assignments/${id}/submissions`, payload);
+    return response.data;
+  },
+};
+
 export const apiUtils = {
   // 토큰 저장
   setToken: (token: string) => {

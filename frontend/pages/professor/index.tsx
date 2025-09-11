@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import ProtectedRoute from '../../src/components/ProtectedRoute';
 import type { User, DashboardStats } from '../../src/types';
+import ChatWidget from '../../src/components/chat/ChatWidget';
+import { dashboardAPIV2 } from '../../src/services/api';
 
 const ProfessorDashboard: React.FC = () => {
   const router = useRouter();
@@ -40,6 +42,21 @@ const ProfessorDashboard: React.FC = () => {
     };
 
     fetchStats();
+  }, []);
+
+  // Fetch dynamic stats (override hardcoded placeholder when available)
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const resp: any = await dashboardAPIV2.getStats();
+        if (resp?.success && resp?.data) {
+          setStats(resp.data);
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+    load();
   }, []);
 
   const handleLogout = () => {
@@ -249,6 +266,8 @@ const ProfessorDashboard: React.FC = () => {
             </div>
           </div>
         </main>
+        {/* Chat widget (school info bot) */}
+        <ChatWidget title="학교 안내 봇" />
       </div>
     </ProtectedRoute>
   );

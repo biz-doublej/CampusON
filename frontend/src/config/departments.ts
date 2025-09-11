@@ -60,3 +60,20 @@ export const getDepartmentDashboardPath = (department: Department): string => {
 export const getDepartmentColor = (department: Department): string => {
   return DEPARTMENTS[department].color;
 };
+
+// 입력 문자열을 Department 키로 정규화 (대소문자/구분자 허용)
+export const normalizeDepartment = (input: string): Department => {
+  const s = (input || '').toLowerCase().replace(/\s+/g, '').replace(/-/g, '_');
+  switch (s) {
+    case 'nursing':
+      return 'nursing';
+    case 'dental_hygiene':
+    case 'dentalhygiene':
+      return 'dental_hygiene';
+    case 'physical_therapy':
+    case 'physicaltherapy':
+      return 'physical_therapy';
+    default:
+      return 'nursing';
+  }
+};

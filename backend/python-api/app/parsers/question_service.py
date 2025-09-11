@@ -49,6 +49,21 @@ def create_question_from_parsed_data(
     """
     try:
         # 필수 필드 확인
+        _content_fallback = (
+            question_data.get("content")
+            or question_data.get("question")
+            or question_data.get("stem")
+            or question_data.get("question_text")
+            or question_data.get("text")
+            or question_data.get("title")
+        )
+        if not _content_fallback:
+            _desc = question_data.get("description")
+            if isinstance(_desc, list) and _desc:
+                _content_fallback = "\n".join([str(x).strip() for x in _desc if str(x).strip()])
+        if _content_fallback and not question_data.get("content"):
+            question_data["content"] = _content_fallback
+
         content = question_data.get("content")
         if not content:
             logger.error("문제 내용이 없습니다.")
@@ -82,7 +97,7 @@ def create_question_from_parsed_data(
                 if options:
                     embedding_text += " " + " ".join(options.values())
                 
-                embeddings = create_embedding(embedding_text, model_type="openai")
+                embeddings = create_embedding(embedding_text)
                 if embeddings and len(embeddings) > 0:
                     question.embedding = embeddings[0]
             except Exception as e:
@@ -426,7 +441,7 @@ def create_question_from_data(
             
             try:
                 # OpenAI 임베딩 생성
-                embeddings = create_embedding(embedding_text, model_type="openai")
+                embeddings = create_embedding(embedding_text)
                 if embeddings and len(embeddings) > 0:
                     question.embedding = embeddings[0]
             except Exception as e:
@@ -720,7 +735,7 @@ def save_parsed_questions_with_excel_data(
                         embedding_text += " " + " ".join(options.values())
                     
                     try:
-                        embeddings = create_embedding(embedding_text, model_type="openai")
+                        embeddings = create_embedding(embedding_text)
                         if embeddings and len(embeddings) > 0:
                             question.embedding = embeddings[0]
                     except Exception as e:

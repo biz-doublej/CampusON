@@ -25,7 +25,8 @@ const nextConfig = {
         },
         {
           source: '/parser/:path*', 
-          destination: 'http://localhost:8001/:path*'
+          // Use 127.0.0.1 to avoid IPv6 localhost(::1) issues on Windows
+          destination: 'http://127.0.0.1:8001/:path*'
         }
       ];
     }

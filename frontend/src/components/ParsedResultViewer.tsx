@@ -111,7 +111,7 @@ const ParsedResultViewer: React.FC<ParsedResultViewerProps> = ({ result }) => {
             <div className="flex overflow-x-auto pb-2 gap-2">
               {questions.map((question, index) => (
                 <button
-                  key={question.number}
+                  key={`${question?.number ?? 'n'}-${index}`}
                   onClick={() => handleQuestionSelect(index)}
                   className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center text-sm font-medium transition-colors ${
                     index === currentQuestionIndex 

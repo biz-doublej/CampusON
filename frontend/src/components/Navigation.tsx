@@ -27,6 +27,9 @@ const Navigation: React.FC<NavigationProps> = ({ role, currentPath }) => {
           { name: '학생 관리', href: '/professor/students', current: currentPath === '/professor/students' },
           { name: '문제 관리', href: '/professor/questions', current: currentPath === '/professor/questions' },
           { name: 'PDF 업로드', href: '/professor/upload', current: currentPath === '/professor/upload' },
+          { name: '문제 생성', href: '/professor/generate', current: currentPath === '/professor/generate' },
+          { name: '커뮤니티', href: '/community', current: currentPath === '/community' },
+          { name: '공지 임베드', href: '/notice-embed', current: currentPath === '/notice-embed' },
         ];
       case 'student':
         return [
@@ -34,6 +37,8 @@ const Navigation: React.FC<NavigationProps> = ({ role, currentPath }) => {
           { name: '진단 테스트', href: '/student/diagnostic', current: currentPath === '/student/diagnostic' },
           { name: '과제 목록', href: '/student/assignments', current: currentPath === '/student/assignments' },
           { name: '성적 확인', href: '/student/grades', current: currentPath === '/student/grades' },
+          { name: '커뮤니티', href: '/community', current: currentPath === '/community' },
+          { name: '공지', href: '/notice-embed', current: currentPath === '/notice-embed' },
         ];
       default:
         return [];

@@ -11,12 +11,20 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: Optional[str] = None
     GOOGLE_API_KEY: Optional[str] = None  # Alternative name for Gemini API key
     GEMINI_MODEL_NAME: str = "gemini-2.0-flash-exp"
+    # Embeddings (Gemini)
+    GEMINI_EMBEDDING_MODEL: Optional[str] = None  # e.g., text-embedding-004
 
     # OpenAI (optional for embeddings)
     OPENAI_API_KEY: Optional[str] = None
+    OPENAI_EMBEDDING_MODEL: Optional[str] = None  # e.g., text-embedding-3-small
+
+    # Embedding provider switch: 'gemini' | 'openai'
+    EMBEDDING_PROVIDER: Optional[str] = None
 
     # Poppler (optional explicit path; auto-resolve in parser if not set)
     POPPLER_PATH: Optional[str] = None
+    # Optional explicit Tesseract path for OCR fallback
+    TESSERACT_CMD: Optional[str] = None
 
     # Database (use SQLite by default for local dev)
     DATABASE_URL: str = "sqlite:///./app.db"
@@ -31,5 +39,4 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-
 

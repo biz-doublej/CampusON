@@ -231,3 +231,7 @@ uploads/
 output/
 logs/
 *.log 
+
+# Project data/artifacts (generated)
+backend/python-api/app.db
+backend/python-api/app/data/faiss/*

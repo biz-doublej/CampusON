@@ -1,33 +1,83 @@
 from typing import List, Union, Optional
 import os
+import numpy as np
 
 
-def create_embedding(text: Union[str, List[str]], model_type: str = "openai", model_name: Optional[str] = None):
-    """임베딩 생성 유틸. 키가 없거나 오류 시 빈 결과를 반환하여 상위 로직을 막지 않습니다.
+def _embed_openai(texts: List[str], model_name: Optional[str] = None):
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        return None
+    try:
+        from openai import OpenAI  # type: ignore
+        client = OpenAI()
+        model = model_name or os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
+        resp = client.embeddings.create(model=model, input=texts)
+        vecs = [np.array(d.embedding, dtype=np.float32).tolist() for d in resp.data]
+        return vecs
+    except Exception:
+        return None
 
-    Args:
-        text: 단일 문자열 또는 문자열 리스트
-        model_type: 현재 'openai'만 지원
-        model_name: 선택 모델명
-    Returns:
-        리스트 입력이면 리스트로, 단일 입력이면 단일 임베딩(또는 None)
+
+def _embed_gemini(texts: List[str], model_name: Optional[str] = None):
+    api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        return None
+    try:
+        import google.generativeai as genai  # type: ignore
+        genai.configure(api_key=api_key)  # type: ignore
+        model = model_name or os.getenv("GEMINI_EMBEDDING_MODEL", "text-embedding-004")
+        vecs: List[List[float]] = []
+        for t in texts:
+            try:
+                r = genai.embed_content(model=model, content=t)  # type: ignore
+                v = r.get('embedding') or r.get('data', {}).get('embedding')  # sdk versions
+                if v is None and hasattr(r, 'embedding'):
+                    v = getattr(r, 'embedding')  # type: ignore
+                if v is None:
+                    vecs.append(None)  # type: ignore
+                else:
+                    vecs.append(np.array(v, dtype=np.float32).tolist())
+            except Exception:
+                vecs.append(None)  # type: ignore
+        return vecs
+    except Exception:
+        return None
+
+
+def create_embedding(text: Union[str, List[str]], model_type: Optional[str] = None, model_name: Optional[str] = None):
+    """Create embeddings for a string or list of strings.
+
+    Provider selection order:
+    - model_type parameter if provided ('gemini' | 'openai')
+    - env EMBEDDING_PROVIDER ('gemini' | 'openai', default 'openai')
+
+    Returns list[vector] for list input, or single vector for string input.
+    On failure, returns None (or list of None).
     """
     try:
         if isinstance(text, list):
             texts = text
+            single = False
         else:
             texts = [text]
+            single = True
 
-        if model_type == "openai":
-            api_key = os.getenv("OPENAI_API_KEY")
-            if not api_key:
-                return [None] * len(texts) if isinstance(text, list) else None
-            # TODO: openai 1.x 클라이언트로 교체 구현
-            return [None] * len(texts) if isinstance(text, list) else None
+        provider = (model_type or os.getenv("EMBEDDING_PROVIDER") or "openai").lower()
 
-        return [None] * len(texts) if isinstance(text, list) else None
+        vecs = None
+        if provider == "gemini":
+            vecs = _embed_gemini(texts, model_name=model_name)
+            if vecs is None:
+                # fallback to openai if available
+                vecs = _embed_openai(texts, model_name=model_name)
+        else:
+            vecs = _embed_openai(texts, model_name=model_name)
+            if vecs is None:
+                vecs = _embed_gemini(texts, model_name=model_name)
+
+        if vecs is None:
+            return [None] * len(texts) if not single else None
+        return vecs if not single else vecs[0]
 
     except Exception:
         return [None] * len(texts) if isinstance(text, list) else None
-
-

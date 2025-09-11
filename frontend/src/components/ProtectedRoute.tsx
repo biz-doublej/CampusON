@@ -31,7 +31,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
         if (!token || !userStr) {
           console.log('Missing token or user data, redirecting to login');
           setRedirecting(true);
-          router.replace('/auth/login').catch(console.error);
+          if (router.asPath !== '/auth/login') {
+            router.replace('/auth/login').catch(console.error);
+          }
           return;
         }
 
@@ -47,7 +49,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
             console.log('User does not have required permissions:', { userRole, allowedRoles });
             // 권한이 없는 경우 기본 대시보드로 리다이렉트
             setRedirecting(true);
-            router.replace('/dashboard').catch(console.error);
+            if (router.asPath !== '/dashboard') {
+              router.replace('/dashboard').catch(console.error);
+            }
             return;
           }
         }
@@ -64,7 +68,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
           console.error('LocalStorage error:', localStorageError);
         }
         setRedirecting(true);
-        router.replace('/auth/login').catch(console.error);
+        if (router.asPath !== '/auth/login') {
+          router.replace('/auth/login').catch(console.error);
+        }
       } finally {
         setLoading(false);
       }

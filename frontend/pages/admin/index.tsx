@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import ProtectedRoute from '../../src/components/ProtectedRoute';
+import ChatWidget from '../../src/components/chat/ChatWidget';
 import FileUploader from '../../src/components/FileUploader';
 import ParsedResultViewer from '../../src/components/ParsedResultViewer';
 import type { User, DashboardStats } from '../../src/types';
 import { ParsedResult } from '../../src/services/parserService';
+import { adminAPI } from '../../src/services/api';
 
 const AdminDashboard: React.FC = () => {
   const router = useRouter();
@@ -45,6 +47,18 @@ const AdminDashboard: React.FC = () => {
     };
 
     fetchStats();
+  }, []);
+
+  // Load real admin stats (non-blocking fallback over initial placeholders)
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await adminAPI.getStats();
+        if (res.success && res.data) setStats(res.data);
+      } catch (e) {
+        // ignore: keep placeholders
+      }
+    })();
   }, []);
 
   const handleLogout = () => {
@@ -290,6 +304,8 @@ const AdminDashboard: React.FC = () => {
             </div>
           </div>
         </main>
+        {/* Chat widget (school info bot) */}
+        <ChatWidget title="학교 안내 봇" />
       </div>
     </ProtectedRoute>
   );

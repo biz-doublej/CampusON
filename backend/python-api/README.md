@@ -141,6 +141,7 @@ print(response.text)
 
 #### `POST /api/parse`
 Parses uploaded PDF files using Gemini AI.
+Automatically ingests parsed questions into the AI knowledge base and saves them into the DB by default.
 
 **Request:**
 ```bash
@@ -176,6 +177,28 @@ curl -X POST "http://localhost:8001/api/parse" \
 }
 ```
 
+### AI/Quiz/Community (Base scaffolding)
+
+- `POST /api/ai/ingest` — ingest parsed questions into a simple knowledge table
+  - body: `{ "questions": [ { number, content, options, description?, subject?, area_name?, year? } ] }`
+- `POST /api/ai/generate-questions` — generate sample questions via Gemini (fallback placeholders without key)
+  - body: `{ "topic": "string", "count": 5, "difficulty": "하|중|상" }`
+- `POST /api/community/ai/chat` — lightweight community AI chat
+  - body: `{ "messages": [{ role: "user", content: "..." }], "context": "optional" }`
+- `POST /api/quiz/create` — create a quiz from existing DB question IDs
+- `GET /api/quiz/{quiz_id}` — fetch quiz items
+- `POST /api/quiz/{quiz_id}/submit` — submit answers `{ answers: { [questionId]: "1|2|3|4" }, student_id?: string }`
+- `GET /api/notices/proxy?url=...` — fetch raw HTML for school notices if iframe is blocked
+
+### RAG (FAISS)
+
+- `POST /api/ai/rag/build` — build FAISS index from `knowledge_chunks` (requires embeddings)
+- `POST /api/ai/rag/query` — query similar chunks `{ query: string, top_k?: number }`
+
+Embeddings
+- Uses OpenAI embeddings if `OPENAI_API_KEY` is set (default `text-embedding-3-small`).
+- Without `OPENAI_API_KEY`, FAISS indexing is skipped and query falls back to SQL LIKE.
+
 ## 🔍 Troubleshooting
 
 ### Common Issues
@@ -191,6 +214,10 @@ curl -X POST "http://localhost:8001/api/parse" \
 ```bash
 pip install google-generativeai>=0.8.0
 ```
+
+Query params:
+- `auto_ingest` (default: `true`) — when true, parsed questions are indexed into the knowledge base automatically.
+- `auto_save` (default: `true`) — when true, parsed questions are saved into the DB `questions` table automatically.
 
 #### 3. API Key Invalid Error
 **Solution:**

@@ -7,9 +7,11 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import ProtectedRoute from '../../src/components/ProtectedRoute';
+import ChatWidget from '../../src/components/chat/ChatWidget';
 import { DynamicDashboardRouter } from '../../src/utils/dashboardRouter';
 import { authAPI, dashboardAPI } from '../../src/services/api';
 import type { User, DashboardStats } from '../../src/types';
+import { normalizeDepartment, getDepartmentDashboardPath } from '../../src/config/departments';
 
 interface DashboardFeature {
   id: string;
@@ -41,6 +43,16 @@ const DynamicDashboard: React.FC = () => {
       if (!userData) {
         router.push('/auth/login');
         return;
+      }
+
+      // 학생은 학과별 대시보드로 리다이렉트
+      if (userData.role?.toLowerCase() === 'student' && userData.department) {
+        const depKey = normalizeDepartment(userData.department as any);
+        const depPath = getDepartmentDashboardPath(depKey);
+        if (router.asPath !== depPath) {
+          await router.replace(depPath);
+          return;
+        }
       }
 
       setUser(userData);
@@ -96,6 +108,15 @@ const DynamicDashboard: React.FC = () => {
   const loadDashboardFeatures = (userData: User) => {
     const metadata = DynamicDashboardRouter.getDashboardMetadata(userData);
     const dynamicFeatures = generateFeaturesForUser(userData, metadata);
+    // 공통 커뮤니티 기능을 상단에 추가
+    dynamicFeatures.unshift({
+      id: 'community',
+      title: '커뮤니티',
+      description: '경복대 학생 커뮤니티 게시판으로 이동',
+      icon: '💬',
+      action: () => router.push('/community/boards'),
+      available: true,
+    });
     setFeatures(dynamicFeatures);
   };
 
@@ -384,6 +405,8 @@ const DynamicDashboard: React.FC = () => {
           </div>
         </main>
       </div>
+      {/* Chat widget (school info bot) */}
+      <ChatWidget title="학교 안내 봇" />
     </ProtectedRoute>
   );
 };

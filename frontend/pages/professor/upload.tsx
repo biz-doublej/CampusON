@@ -1,10 +1,15 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import ProtectedRoute from '../../src/components/ProtectedRoute';
 import FileUploader from '../../src/components/FileUploader';
 import ParsedResultViewer from '../../src/components/ParsedResultViewer';
+import aiService from '../../src/services/aiService';
+import questionService from '../../src/services/questionService';
+import quizService from '../../src/services/quizService';
 import type { User } from '../../src/types';
 import type { ParsedResult } from '../../src/services/parserService';
+import axios from 'axios';
+import { getApiUrl } from '../../src/utils/config';
 
 const ProfessorUploadPage: React.FC = () => {
   const router = useRouter();
@@ -12,6 +17,11 @@ const ProfessorUploadPage: React.FC = () => {
   const [parsedResult, setParsedResult] = useState<ParsedResult | null>(null);
   const [isParsingComplete, setIsParsingComplete] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [guidelineOpen] = useState(true);
+  const [status, setStatus] = useState<{ parser: { ok: boolean; url: string; version?: string }; node: { ok: boolean; url: string } }>({
+    parser: { ok: false, url: process.env.NEXT_PUBLIC_PARSER_API_URL || 'http://127.0.0.1:8001' },
+    node: { ok: false, url: getApiUrl() },
+  });
 
   React.useEffect(() => {
     setMounted(true);
@@ -20,6 +30,27 @@ const ProfessorUploadPage: React.FC = () => {
     if (userData) {
       setUser(JSON.parse(userData));
     }
+  }, []);
+
+  // 간단 기술 상태 체크
+  useEffect(() => {
+    const checkStatus = async () => {
+      const parserUrl = process.env.NEXT_PUBLIC_PARSER_API_URL || 'http://127.0.0.1:8001';
+      const nodeUrl = getApiUrl();
+      try {
+        const ph = await axios.get(`${parserUrl}/api/health`, { timeout: 3000 });
+        setStatus((s) => ({ ...s, parser: { ok: true, url: parserUrl, version: ph.data?.version } }));
+      } catch {
+        setStatus((s) => ({ ...s, parser: { ok: false, url: parserUrl } }));
+      }
+      try {
+        const nh = await axios.get(`${nodeUrl}/health`, { timeout: 3000 });
+        if (nh.status === 200) setStatus((s) => ({ ...s, node: { ok: true, url: nodeUrl } }));
+      } catch {
+        setStatus((s) => ({ ...s, node: { ok: false, url: nodeUrl } }));
+      }
+    };
+    checkStatus();
   }, []);
 
   const handleLogout = () => {
@@ -94,6 +125,44 @@ const ProfessorUploadPage: React.FC = () => {
           </div>
         </header>
 
+        {/* 간편 안내 + 기술 상태 */}
+        <div className="max-w-7xl mx-auto pt-4 px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="bg-white border rounded-lg p-4 lg:col-span-2">
+              <h2 className="text-lg font-semibold mb-2">간편 안내</h2>
+              <p className="text-sm text-gray-600">PDF를 업로드하면 자동으로 문항을 추출합니다. 결과를 검토한 뒤 바로 퀴즈를 생성할 수 있습니다.</p>
+              <ul className="mt-3 text-sm text-gray-700 list-disc list-inside">
+                <li>국가고시/모의고사 PDF 권장</li>
+                <li>표/그림이 많은 경우 설명이 간략화될 수 있음</li>
+                <li>필요 시 AI 보정으로 품질 개선 가능</li>
+              </ul>
+            </div>
+            <div className="bg-white border rounded-lg p-4">
+              <h2 className="text-lg font-semibold mb-2">기술 상태</h2>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-700">Parser API</span>
+                  <span className={status.parser.ok ? 'text-green-600' : 'text-red-600'}>{status.parser.ok ? '연결됨' : '연결 안 됨'}</span>
+                </div>
+                <div className="text-gray-500 break-all">{status.parser.url}{status.parser.version ? ` · v${status.parser.version}` : ''}</div>
+                <div className="flex items-center justify-between mt-2">
+                  <span className="text-gray-700">Node API</span>
+                  <span className={status.node.ok ? 'text-green-600' : 'text-red-600'}>{status.node.ok ? '연결됨' : '연결 안 됨'}</span>
+                </div>
+                <div className="text-gray-500 break-all">{status.node.url}</div>
+                <div className="mt-3 text-gray-600">
+                  <div>적용 기술</div>
+                  <ul className="list-disc list-inside">
+                    <li>PDF 파싱: Poppler 기반 + 규칙/휴리스틱</li>
+                    <li>AI 보정: OpenAI/Gemini (선택)</li>
+                    <li>RAG/FAISS: 선택적 구성</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* 메인 콘텐츠 */}
         <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
           <div className="px-4 py-6 sm:px-0">
@@ -113,6 +182,9 @@ const ProfessorUploadPage: React.FC = () => {
                   </div>
 
                   {/* 업로드 가이드라인 */}
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-medium">업로드 가이드라인</h3>
+                  </div>
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
                     <h3 className="text-lg font-medium text-blue-900 mb-4">업로드 가이드라인</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -195,6 +267,67 @@ const ProfessorUploadPage: React.FC = () => {
                         새 파일 업로드
                       </button>
                       <button
+                        onClick={async () => {
+                          if (!parsedResult) return;
+                          const normalized = (parsedResult.questions || []).map(q => ({
+                            number: q.number,
+                            content: q.content,
+                            options: q.options,
+                            description: q.description,
+                            answer: q.answer,
+                            subject: parsedResult.metadata?.subject,
+                            year: parsedResult.metadata?.year,
+                          }));
+                          try {
+                            const saved = await questionService.bulkSave(normalized);
+                            await aiService.ingest(normalized);
+                            alert(`저장 완료: ${saved.count}개 질문`);
+                          } catch (e) {
+                            console.error(e);
+                            alert('저장 중 오류가 발생했습니다.');
+                          }
+                        }}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                      >
+                        결과 저장
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (!parsedResult) return;
+                          const normalized = (parsedResult.questions || []).map(q => ({
+                            number: q.number,
+                            content: q.content,
+                            options: q.options,
+                            description: q.description,
+                            answer: q.answer,
+                            subject: parsedResult.metadata?.subject,
+                            year: parsedResult.metadata?.year,
+                          }));
+                          try {
+                            const saved = await questionService.bulkSave(normalized);
+                            const ids = saved.question_ids || [];
+                            if (ids.length === 0) {
+                              alert('저장된 질문이 없습니다.');
+                              return;
+                            }
+                            const res = await quizService.create(`${parsedResult.metadata?.title || '퀴즈'}`, ids.map((id: number) => ({ id })));
+                            const qid = res?.quiz?.id;
+                            if (qid) {
+                              alert(`퀴즈 생성 완료 (ID: ${qid})`);
+                              router.push(`/student/quiz/${qid}`);
+                            } else {
+                              alert('퀴즈 생성 실패');
+                            }
+                          } catch (e) {
+                            console.error(e);
+                            alert('저장/퀴즈 생성 중 오류가 발생했습니다.');
+                          }
+                        }}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        저장 후 퀴즈 생성
+                      </button>
+                      <button
                         onClick={() => {
                           // TODO: 파싱된 결과를 데이터베이스에 저장하는 로직
                           alert('문제 저장 기능은 추후 구현 예정입니다.');
@@ -209,6 +342,22 @@ const ProfessorUploadPage: React.FC = () => {
 
                 {/* 파싱 결과 뷰어 컴포넌트 */}
                 {parsedResult && <ParsedResultViewer result={parsedResult} />}
+                {parsedResult && (
+                  <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="bg-white border rounded-lg p-4">
+                      <div className="text-sm text-gray-500">문항 수</div>
+                      <div className="text-2xl font-semibold">{parsedResult.questions?.length ?? 0}</div>
+                    </div>
+                    <div className="bg-white border rounded-lg p-4">
+                      <div className="text-sm text-gray-500">제목</div>
+                      <div className="text-base font-medium truncate">{parsedResult.metadata?.title || '제목 없음'}</div>
+                    </div>
+                    <div className="bg-white border rounded-lg p-4">
+                      <div className="text-sm text-gray-500">과목/연도</div>
+                      <div className="text-base font-medium">{parsedResult.metadata?.subject || '-'} / {parsedResult.metadata?.year || '-'}</div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

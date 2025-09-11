@@ -3,7 +3,13 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import authRoutes from './auth/routes';
+import usersRoutes from './users/routes';
+import dashboardRoutes from './dashboard/routes';
 import { authenticateToken } from './auth/middleware';
+import assignmentsRoutes from './assignments/routes';
+import aiRoutes from './ai/routes';
+import adminRoutes from './admin/routes';
+import studentsRoutes from './students/routes';
 
 const app = express();
 
@@ -20,7 +26,7 @@ app.use(cors({
     'https://*.vercel.app'
   ],
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
@@ -78,6 +84,17 @@ app.get('/health', (req, res) => {
 
 // Authentication Routes
 app.use('/api/auth', authRoutes);
+
+// Users Routes (protected)
+app.use('/api/users', usersRoutes);
+// Dashboard Routes v2 (dynamic)
+app.use('/api/dashboard', dashboardRoutes);
+// Assignments Routes
+app.use('/api/assignments', assignmentsRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/admin', adminRoutes);
+// Students Routes
+app.use('/api/students', studentsRoutes);
 
 // Protected Dashboard API 엔드포인트들 (인증 필요)
 app.get('/api/dashboard/stats', authenticateToken, (req, res) => {

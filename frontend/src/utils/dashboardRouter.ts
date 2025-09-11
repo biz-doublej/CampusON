@@ -5,7 +5,7 @@
  */
 
 import type { User, Department } from '../types';
-import { getDepartmentDashboardPath } from '../config/departments';
+import { getDepartmentDashboardPath, normalizeDepartment } from '../config/departments';
 
 interface DashboardRoute {
   path: string;
@@ -42,8 +42,9 @@ export class DynamicDashboardRouter {
         // Students are routed based on their department
         if (department) {
           try {
-            const departmentPath = getDepartmentDashboardPath(department);
-            const departmentName = this.getDepartmentDisplayName(department);
+            const depKey = normalizeDepartment(department as any);
+            const departmentPath = getDepartmentDashboardPath(depKey);
+            const departmentName = this.getDepartmentDisplayName(depKey);
             
             return {
               path: departmentPath,
