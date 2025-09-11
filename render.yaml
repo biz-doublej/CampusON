@@ -1,0 +1,50 @@
+services:
+  - type: web
+    name: campuson-python-api
+    env: python
+    region: oregon
+    plan: free
+    rootDir: backend/python-api
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PORT
+        value: "8001"
+      - key: DEBUG
+        value: "False"
+      # Set to your frontend URL (e.g., https://campuson.vercel.app)
+      - key: ALLOWED_ORIGINS
+        value: "[\"http://localhost:3000\"]"
+      - key: EMBEDDING_PROVIDER
+        value: gemini
+      # Add AI keys in Render dashboard secrets
+      # - key: GEMINI_API_KEY
+      #   sync: false
+      # - key: OPENAI_API_KEY
+      #   sync: false
+
+  - type: web
+    name: campuson-nodejs-api
+    env: node
+    region: oregon
+    plan: free
+    rootDir: backend/nodejs-api
+    buildCommand: npm install && npm run build
+    startCommand: node dist/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3001"
+      # Replace with your managed Postgres connection string (e.g., Supabase/Neon)
+      # - key: DATABASE_URL
+      #   sync: false
+      # - key: JWT_SECRET
+      #   sync: false
+      - key: FRONTEND_URL
+        value: "http://localhost:3000"
+
+# Notes:
+# 1) Connect this repo in Render and choose "New + -> Blueprint" to provision both services.
+# 2) Configure secrets (API keys, DATABASE_URL, JWT_SECRET) in the Render dashboard.
+# 3) After deployment, update your frontend env with the public URLs for both APIs.
