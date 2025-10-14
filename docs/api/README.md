@@ -129,9 +129,9 @@ pytest tests/ -v --cov=app
 
 ```txt
 # 핵심 프레임워크
-fastapi==0.104.1
-uvicorn==0.24.0
-pydantic==2.5.0
+fastapi==0.115.9
+uvicorn==0.30.6
+pydantic>=2.7,<3
 
 # PDF 처리
 pdfplumber==0.10.3

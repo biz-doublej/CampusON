@@ -9,9 +9,9 @@
 **`requirements-test.txt`**
 ```txt
 # 기본 의존성
-fastapi==0.104.1
-uvicorn==0.24.0
-pydantic==2.5.0
+fastapi==0.115.9
+uvicorn==0.30.6
+pydantic>=2.7,<3
 pdfplumber==0.10.3
 
 # 테스트 의존성
