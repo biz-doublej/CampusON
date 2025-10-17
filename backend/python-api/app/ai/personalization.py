@@ -4,9 +4,11 @@ from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
+from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
-from app.models.learning import StudentSkillState
+from app.models.learning import QuestionSkill, StudentInteraction, StudentSkillState
+from app.models.question import Question
 
 
 class PersonalizationError(Exception):
@@ -171,12 +173,16 @@ def _state_index(states: Iterable[StudentSkillState]) -> Dict[str, StudentSkillS
     return indexed
 
 
+def _skill_aliases(skill: SkillDefinition) -> Tuple[str, ...]:
+    return tuple(alias.strip().lower() for alias in skill.aliases + (skill.key,))
+
+
 def _match_skill_state(
     skill: SkillDefinition,
     index: Dict[str, StudentSkillState],
 ) -> Optional[StudentSkillState]:
-    for alias in skill.aliases + (skill.key,):
-        normalized = alias.strip().lower()
+    for alias in _skill_aliases(skill):
+        normalized = alias
         if normalized in index:
             return index[normalized]
     return None
@@ -218,21 +224,176 @@ def _compose_weekly_schedule(
     for week_index in range(weeks):
         pool = pools[min(week_index, len(pools) - 1)]
         skill = pool[week_index % len(pool)]
+        recommended_questions = skill.get("recommended_questions") or []
         scheduled.append(
             {
                 "week": week_index + 1,
                 "theme": skill["label"],
                 "focus": skill["focus"],
                 "skill_key": skill["key"],
+                "priority": skill["priority"],
                 "suggested_actions": [
                     "주간 퀴즈 10문제 풀기",
                     "RAG 검색으로 핵심 개념 복습",
                     "실습 체크리스트 작성",
                 ],
                 "recommended_resource": skill["resources"][0] if skill["resources"] else None,
+                "recommended_question": recommended_questions[0] if recommended_questions else None,
             }
         )
     return scheduled
+
+
+def _calculate_performance(db: Session, student_id: str) -> Dict[str, Any]:
+    total_attempts, correct_count = (
+        db.query(
+            func.count(StudentInteraction.id),
+            func.sum(case((StudentInteraction.correct.is_(True), 1), else_=0)),
+        )
+        .filter(StudentInteraction.student_id == student_id)
+        .one()
+    )
+    total_attempts = int(total_attempts or 0)
+    correct_count = int(correct_count or 0)
+    accuracy = round(correct_count / total_attempts, 3) if total_attempts else None
+
+    last_interaction = (
+        db.query(StudentInteraction)
+        .filter(StudentInteraction.student_id == student_id)
+        .order_by(StudentInteraction.created_at.desc())
+        .first()
+    )
+    last_activity = (
+        last_interaction.created_at.isoformat()
+        if last_interaction and last_interaction.created_at
+        else None
+    )
+
+    streak = 0
+    if total_attempts:
+        recent = (
+            db.query(StudentInteraction.correct)
+            .filter(StudentInteraction.student_id == student_id)
+            .order_by(StudentInteraction.created_at.desc())
+            .limit(12)
+            .all()
+        )
+        for (is_correct,) in recent:
+            if is_correct:
+                streak += 1
+            else:
+                break
+
+    skill_rows = (
+        db.query(
+            QuestionSkill.skill,
+            func.count(StudentInteraction.id),
+            func.sum(case((StudentInteraction.correct.is_(True), 1), else_=0)),
+        )
+        .join(QuestionSkill, QuestionSkill.question_id == StudentInteraction.question_id)
+        .filter(StudentInteraction.student_id == student_id)
+        .group_by(QuestionSkill.skill)
+        .all()
+    )
+    skill_metrics: Dict[str, Dict[str, Any]] = {}
+    for raw_skill, attempts, correct in skill_rows:
+        normalized = (raw_skill or "").strip().lower()
+        if not normalized:
+            continue
+        attempts_i = int(attempts or 0)
+        correct_i = int(correct or 0)
+        skill_metrics[normalized] = {
+            "attempts": attempts_i,
+            "correct": correct_i,
+            "accuracy": round(correct_i / attempts_i, 3) if attempts_i else None,
+        }
+
+    recent_incorrect_rows = (
+        db.query(StudentInteraction, Question, QuestionSkill.skill)
+        .join(Question, Question.id == StudentInteraction.question_id)
+        .outerjoin(QuestionSkill, QuestionSkill.question_id == Question.id)
+        .filter(
+            StudentInteraction.student_id == student_id,
+            StudentInteraction.correct.is_(False),
+        )
+        .order_by(StudentInteraction.created_at.desc())
+        .limit(3)
+        .all()
+    )
+    recent_incorrect: List[Dict[str, Any]] = []
+    for interaction, question, skill in recent_incorrect_rows:
+        recent_incorrect.append(
+            {
+                "question_id": question.id,
+                "question_number": question.question_number,
+                "skill": (skill or "").strip() or None,
+                "content_preview": (question.content or "")[:140],
+                "attempted_at": interaction.created_at.isoformat()
+                if interaction.created_at
+                else None,
+            }
+        )
+
+    return {
+        "total_attempts": total_attempts,
+        "correct": correct_count,
+        "accuracy": accuracy,
+        "last_activity": last_activity,
+        "current_streak": streak,
+        "skill_metrics": skill_metrics,
+        "recent_incorrect": recent_incorrect,
+    }
+
+
+def _fetch_questions_for_skill(
+    db: Session,
+    skill: SkillDefinition,
+    limit: int = 3,
+) -> List[Dict[str, Any]]:
+    aliases = _skill_aliases(skill)
+    rows = (
+        db.query(Question)
+        .join(QuestionSkill, QuestionSkill.question_id == Question.id)
+        .filter(QuestionSkill.skill.in_(aliases))
+        .order_by(Question.id.desc())
+        .limit(limit)
+        .all()
+    )
+    items: List[Dict[str, Any]] = []
+    for q in rows:
+        items.append(
+            {
+                "id": q.id,
+                "number": q.question_number,
+                "difficulty": getattr(q.difficulty, "value", "중"),
+                "subject": q.subject,
+                "area_name": q.area_name,
+            }
+        )
+    return items
+
+
+def _build_dynamic_actions(
+    perf: Dict[str, Any],
+    focus_skills: List[Dict[str, Any]],
+    recent_incorrect: List[Dict[str, Any]],
+) -> List[str]:
+    actions: List[str] = []
+    total_attempts = perf.get("total_attempts", 0)
+    accuracy = perf.get("accuracy")
+
+    if total_attempts < 10:
+        actions.append("학습 로그가 부족합니다. 최소 5문제를 추가로 풀이하세요.")
+    if isinstance(accuracy, float) and accuracy < 0.65:
+        actions.append("정답률이 낮습니다. RAG 검색으로 핵심 개념을 복습한 뒤 복습 퀴즈를 진행하세요.")
+    if focus_skills:
+        primary = ", ".join(skill["label"] for skill in focus_skills[:2])
+        actions.append(f"집중 관리 역량({primary})에 대한 요약 노트를 작성해 보세요.")
+    if recent_incorrect:
+        actions.append("최근 오답 문제의 정답 근거를 스스로 설명해 보세요.")
+    if not actions:
+        actions.append("현재 학습 계획을 유지하면서 주간 목표를 확인하세요.")
+    return actions[:4]
 
 
 def build_personalized_plan(
@@ -251,6 +412,7 @@ def build_personalized_plan(
     if not base_skills:
         raise PersonalizationError("학과에 대한 스킬 카탈로그가 비어 있습니다.")
 
+    performance = _calculate_performance(db, student_id)
     states = (
         db.query(StudentSkillState)
         .filter(StudentSkillState.student_id == student_id)
@@ -273,6 +435,38 @@ def build_personalized_plan(
             reinforce_count += 1
         else:
             maintain_count += 1
+        skill_perf = None
+        for alias in _skill_aliases(definition):
+            metrics = performance["skill_metrics"].get(alias)
+            if metrics:
+                skill_perf = metrics
+                break
+        recommendations = _fetch_questions_for_skill(db, definition, limit=3)
+        if priority == "focus" and not recommendations:
+            fallback_rows = (
+                db.query(Question)
+                .order_by(Question.id.desc())
+                .limit(3)
+                .all()
+            )
+            recommendations = [
+                {
+                    "id": q.id,
+                    "number": q.question_number,
+                    "difficulty": getattr(q.difficulty, "value", "중"),
+                    "subject": q.subject,
+                    "area_name": q.area_name,
+                }
+                for q in fallback_rows
+            ]
+        action_plan = [
+            f"{definition.label} 관련 RAG 문서를 2건 요약하십시오.",
+            "주간 퀴즈 결과와 정답 근거를 정리해 보세요.",
+        ]
+        if priority == "focus":
+            action_plan.insert(0, "핵심 개념을 정리하고 실습 또는 시뮬레이션을 수행하세요.")
+        elif priority == "reinforce":
+            action_plan.insert(0, "중간 난이도 문제를 선정하여 복습 풀이를 진행하세요.")
         skill_plans.append(
             {
                 "key": definition.key,
@@ -283,6 +477,9 @@ def build_personalized_plan(
                 "priority": priority,
                 "updated_at": matched_state.updated_at.isoformat() if matched_state else None,
                 "resources": list(definition.resources),
+                "performance": skill_perf,
+                "recommended_questions": recommendations,
+                "action_plan": action_plan,
                 "suggested_prompts": [
                     f"{definition.label}과 관련된 실습 체크리스트를 알려줘",
                     f"{definition.label} 역량 강화를 위한 케이스 스터디를 제안해줘",
@@ -292,6 +489,16 @@ def build_personalized_plan(
 
     weeks = _weeks_until(target_exam_date)
     weekly_schedule = _compose_weekly_schedule(skill_plans, weeks=min(weeks, 8))
+    primary_focus_skills = [s for s in skill_plans if s["priority"] in {"focus", "reinforce"}]
+    focus_questions: List[Dict[str, Any]] = []
+    seen_qids = set()
+    for skill in primary_focus_skills:
+        for q in skill.get("recommended_questions", [])[:2]:
+            qid = q.get("id")
+            if qid and qid not in seen_qids:
+                seen_qids.add(qid)
+                focus_questions.append(q)
+    dynamic_actions = _build_dynamic_actions(performance, primary_focus_skills, performance["recent_incorrect"])
 
     return {
         "student_id": student_id,
@@ -300,6 +507,13 @@ def build_personalized_plan(
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "target_exam_date": target_exam_date.isoformat() if target_exam_date else None,
         "weeks_until_exam": weeks,
+        "performance_summary": {
+            "total_attempts": performance["total_attempts"],
+            "correct": performance["correct"],
+            "accuracy": performance["accuracy"],
+            "last_activity": performance["last_activity"],
+            "current_streak": performance["current_streak"],
+        },
         "skill_summary": {
             "focus": focus_count,
             "reinforce": reinforce_count,
@@ -308,6 +522,12 @@ def build_personalized_plan(
         },
         "skills": skill_plans,
         "weekly_schedule": weekly_schedule,
+        "recommendations": {
+            "primary_focus_skills": [s["key"] for s in primary_focus_skills],
+            "focus_questions": focus_questions,
+            "recent_incorrect": performance["recent_incorrect"],
+            "next_actions": dynamic_actions,
+        },
         "recommended_endpoints": {
             "rag_query": "/api/ai/rag/query",
             "department_bot": "/api/department/ai/query",
