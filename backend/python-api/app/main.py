@@ -1,4 +1,5 @@
 from typing import Dict, Any, List, Optional
+from datetime import date
 
 from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Query, Body
 from fastapi.middleware.cors import CORSMiddleware
@@ -24,6 +25,7 @@ from app.models.learning import QuestionSkill, StudentInteraction, StudentSkillS
 from app.routers.community_v2 import router as community_v2_router
 from app.ai.school_bot import ingest_school_docs, answer_school_query
 from app.ai.department_bot import answer_department_query
+from app.ai.personalization import build_personalized_plan, PersonalizationError
 
 import tempfile
 import os
@@ -580,6 +582,25 @@ def dkt_recommend(student_id: str, k: int = 5, db: Session = Depends(get_db)):
         "difficulty": str(getattr(q.difficulty, 'value', '중')),
     } for q in qs]
     return {"success": True, "items": items}
+
+
+@app.get("/ai-tutoring/personalized-plan")
+def ai_personalized_plan(
+    department: str = Query(..., description="학과 키 (예: nursing, physical_therapy)"),
+    student_id: str = Query("anon", description="학생 식별자"),
+    target_exam_date: Optional[date] = Query(None, description="목표 시험일 (YYYY-MM-DD)"),
+    db: Session = Depends(get_db),
+):
+    try:
+        plan = build_personalized_plan(
+            db,
+            student_id=student_id,
+            department=department,
+            target_exam_date=target_exam_date,
+        )
+        return {"success": True, "plan": plan}
+    except PersonalizationError as pe:
+        raise HTTPException(status_code=400, detail=str(pe))
 
 
 # ---------- School Info AI ----------
