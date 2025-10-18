@@ -78,9 +78,12 @@ def test_personalized_plan_prioritizes_low_mastery():
         assert len(plan["weekly_schedule"]) >= 1
         assert skills["assessment"]["performance"]["attempts"] == 1
         assert skills["assessment"]["recommended_questions"]
+        assert isinstance(skills["assessment"]["rag_contexts"], list)
         assert plan["recommendations"]["focus_questions"]
         assert plan["recommendations"]["recent_incorrect"]
         assert plan["weekly_schedule"][0]["recommended_question"] is not None
+        assert "focus_rag_contexts" in plan["recommendations"]
+        assert "recommended_context" in plan["weekly_schedule"][0]
     finally:
         db.close()
 

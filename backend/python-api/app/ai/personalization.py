@@ -7,6 +7,8 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
+from app.ai import rag as rag_ai
+from app.models.knowledge import KnowledgeChunk
 from app.models.learning import QuestionSkill, StudentInteraction, StudentSkillState
 from app.models.question import Question
 
@@ -22,6 +24,7 @@ class SkillDefinition:
     focus: str
     description: str
     aliases: Tuple[str, ...]
+    keywords: Tuple[str, ...]
     resources: Tuple[Dict[str, str], ...]
 
 
@@ -35,6 +38,7 @@ DEPARTMENT_CATALOG: Dict[str, Dict[str, Any]] = {
                 focus="신체사정 · 활력징후 분석",
                 description="환자 상태를 체계적으로 수집하고 문제를 선별합니다.",
                 aliases=("nursing:assessment", "assessment", "간호사정"),
+                keywords=("간호사정", "활력징후", "신체사정"),
                 resources=(
                     {"type": "simulation", "tag": "vital-signs", "title": "활력징후 시뮬레이션"},
                     {"type": "rag", "tag": "assessment", "title": "간호사정 RAG 검색"},
@@ -46,6 +50,7 @@ DEPARTMENT_CATALOG: Dict[str, Dict[str, Any]] = {
                 focus="간호과정 적용 · 우선순위 결정",
                 description="간호진단을 설정하고 적용 가능한 중재를 선택합니다.",
                 aliases=("nursing:clinical_judgment", "clinical_judgment", "간호과정"),
+                keywords=("간호과정", "임상적 판단", "간호진단"),
                 resources=(
                     {"type": "quiz", "tag": "case-study", "title": "케이스 기반 간호판단 문제"},
                     {"type": "rag", "tag": "nanda", "title": "NANDA 간호진단 근거"},
@@ -57,6 +62,7 @@ DEPARTMENT_CATALOG: Dict[str, Dict[str, Any]] = {
                 focus="투약 · 감염관리 · 기본 술기",
                 description="병동 필수 기본 간호술 수행 능력을 기릅니다.",
                 aliases=("nursing:fundamentals", "fundamentals", "기초간호"),
+                keywords=("기초간호술", "투약", "감염관리"),
                 resources=(
                     {"type": "video", "tag": "skills", "title": "기초간호술 시연"},
                     {"type": "practice", "tag": "skills-lab", "title": "술기 실습 체크리스트"},
@@ -73,6 +79,7 @@ DEPARTMENT_CATALOG: Dict[str, Dict[str, Any]] = {
                 focus="근력 · 관절가동범위 · 정렬 분석",
                 description="정형도수치료 전 평가 프로토콜을 숙지합니다.",
                 aliases=("physical_therapy:musculoskeletal", "musculoskeletal", "근골격"),
+                keywords=("근골격계 평가", "도수치료", "관절가동범위"),
                 resources=(
                     {"type": "rag", "tag": "musculoskeletal", "title": "근골격계 평가 근거"},
                     {"type": "practice", "tag": "manual-therapy", "title": "도수평가 핸드북"},
@@ -84,6 +91,7 @@ DEPARTMENT_CATALOG: Dict[str, Dict[str, Any]] = {
                 focus="중추신경계 · 균형 · 보행 분석",
                 description="뇌졸중 및 신경계 환자 재활 프로토콜을 연습합니다.",
                 aliases=("physical_therapy:neurology", "neurology", "신경계"),
+                keywords=("신경계 재활", "뇌졸중 재활", "균형 훈련"),
                 resources=(
                     {"type": "video", "tag": "neurorehab", "title": "신경계 재활 평가 시연"},
                     {"type": "quiz", "tag": "balance-training", "title": "균형·보행 퀴즈"},
@@ -95,6 +103,7 @@ DEPARTMENT_CATALOG: Dict[str, Dict[str, Any]] = {
                 focus="호흡운동 · 유산소 재활",
                 description="심폐질환 환자를 위한 운동처방을 세웁니다.",
                 aliases=("physical_therapy:cardiopulmonary", "cardiopulmonary", "심폐"),
+                keywords=("심폐 재활", "호흡운동", "유산소 재활"),
                 resources=(
                     {"type": "rag", "tag": "cardiopulmonary", "title": "심폐 재활 프로토콜"},
                     {"type": "practice", "tag": "breathing", "title": "호흡운동 지도안"},
@@ -111,6 +120,7 @@ DEPARTMENT_CATALOG: Dict[str, Dict[str, Any]] = {
                 focus="치석제거 · 치주질환 교육",
                 description="치주조직 평가와 환자맞춤 교육을 수행합니다.",
                 aliases=("dental:periodontal", "periodontal", "치주관리"),
+                keywords=("치주관리", "치석제거", "치주질환"),
                 resources=(
                     {"type": "practice", "tag": "scaling", "title": "치석제거 실습 루틴"},
                     {"type": "rag", "tag": "periodontal", "title": "치주질환 가이드"},
@@ -122,6 +132,7 @@ DEPARTMENT_CATALOG: Dict[str, Dict[str, Any]] = {
                 focus="방사선 촬영 · 판독",
                 description="촬영 원칙과 판독 절차를 반복 학습합니다.",
                 aliases=("dental:radiology", "radiology", "치과방사선"),
+                keywords=("치과방사선", "방사선 안전", "판독"),
                 resources=(
                     {"type": "quiz", "tag": "radiology", "title": "치과방사선 판독 퀴즈"},
                     {"type": "video", "tag": "safety", "title": "방사선 안전 교육"},
@@ -133,6 +144,7 @@ DEPARTMENT_CATALOG: Dict[str, Dict[str, Any]] = {
                 focus="맞춤형 교육 계획 · 동기부여",
                 description="환자 상태에 따른 교육 전략을 설계합니다.",
                 aliases=("dental:patient_education", "patient_education", "구강보건교육"),
+                keywords=("구강보건 교육", "환자 상담", "동기부여"),
                 resources=(
                     {"type": "rag", "tag": "education", "title": "교육 스크립트 템플릿"},
                     {"type": "practice", "tag": "counseling", "title": "상담 역할극"},
@@ -225,6 +237,7 @@ def _compose_weekly_schedule(
         pool = pools[min(week_index, len(pools) - 1)]
         skill = pool[week_index % len(pool)]
         recommended_questions = skill.get("recommended_questions") or []
+        rag_contexts = skill.get("rag_contexts") or []
         scheduled.append(
             {
                 "week": week_index + 1,
@@ -239,6 +252,7 @@ def _compose_weekly_schedule(
                 ],
                 "recommended_resource": skill["resources"][0] if skill["resources"] else None,
                 "recommended_question": recommended_questions[0] if recommended_questions else None,
+                "recommended_context": rag_contexts[0] if rag_contexts else None,
             }
         )
     return scheduled
@@ -373,6 +387,72 @@ def _fetch_questions_for_skill(
     return items
 
 
+def _fetch_rag_contexts(
+    db: Session,
+    skill: SkillDefinition,
+    department_key: str,
+    limit: int = 3,
+) -> List[Dict[str, Any]]:
+    query_text = " ".join(skill.keywords) or skill.label
+    results: List[Dict[str, Any]] = []
+    try:
+        rag_hits = rag_ai.query_index(db, query_text, top_k=limit * 2)
+        for hit in rag_hits:
+            meta = hit.get("meta") or {}
+            if meta.get("department") and meta.get("department") != department_key:
+                continue
+            snippet = (hit.get("text") or "").strip()
+            if not snippet:
+                continue
+            results.append(
+                {
+                    "text": snippet[:500],
+                    "source": meta.get("source_file"),
+                    "page": meta.get("page"),
+                    "score": hit.get("score"),
+                }
+            )
+            if len(results) >= limit:
+                break
+    except Exception:
+        pass
+
+    if len(results) >= limit:
+        return results[:limit]
+
+    like = f"%{skill.keywords[0]}%" if skill.keywords else f"%{skill.label}%"
+    fallback_rows = (
+        db.query(KnowledgeChunk)
+        .filter(KnowledgeChunk.text.ilike(like))
+        .order_by(KnowledgeChunk.id.desc())
+        .limit(limit)
+        .all()
+    )
+    for row in fallback_rows:
+        snippet = (row.text or "").strip()
+        if not snippet:
+            continue
+        results.append(
+            {
+                "text": snippet[:500],
+                "source": (row.meta or {}).get("source_file"),
+                "page": (row.meta or {}).get("page"),
+                "score": None,
+            }
+        )
+    deduped: List[Dict[str, Any]] = []
+    seen = set()
+    for item in results:
+        text = item.get("text")
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        deduped.append(item)
+        if len(deduped) >= limit:
+            break
+    return deduped
+
+
 def _build_dynamic_actions(
     perf: Dict[str, Any],
     focus_skills: List[Dict[str, Any]],
@@ -467,6 +547,7 @@ def build_personalized_plan(
             action_plan.insert(0, "핵심 개념을 정리하고 실습 또는 시뮬레이션을 수행하세요.")
         elif priority == "reinforce":
             action_plan.insert(0, "중간 난이도 문제를 선정하여 복습 풀이를 진행하세요.")
+        rag_contexts = _fetch_rag_contexts(db, definition, dep_key, limit=3)
         skill_plans.append(
             {
                 "key": definition.key,
@@ -480,6 +561,7 @@ def build_personalized_plan(
                 "performance": skill_perf,
                 "recommended_questions": recommendations,
                 "action_plan": action_plan,
+                "rag_contexts": rag_contexts,
                 "suggested_prompts": [
                     f"{definition.label}과 관련된 실습 체크리스트를 알려줘",
                     f"{definition.label} 역량 강화를 위한 케이스 스터디를 제안해줘",
@@ -498,6 +580,14 @@ def build_personalized_plan(
             if qid and qid not in seen_qids:
                 seen_qids.add(qid)
                 focus_questions.append(q)
+    focus_rag: List[Dict[str, Any]] = []
+    seen_texts = set()
+    for skill in primary_focus_skills:
+        for ctx in skill.get("rag_contexts", [])[:2]:
+            txt = ctx.get("text")
+            if txt and txt not in seen_texts:
+                seen_texts.add(txt)
+                focus_rag.append(ctx)
     dynamic_actions = _build_dynamic_actions(performance, primary_focus_skills, performance["recent_incorrect"])
 
     return {
@@ -526,6 +616,7 @@ def build_personalized_plan(
             "primary_focus_skills": [s["key"] for s in primary_focus_skills],
             "focus_questions": focus_questions,
             "recent_incorrect": performance["recent_incorrect"],
+            "focus_rag_contexts": focus_rag,
             "next_actions": dynamic_actions,
         },
         "recommended_endpoints": {
