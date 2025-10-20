@@ -21,8 +21,8 @@ export const DEPARTMENTS: Record<Department, DepartmentInfo> = {
   },
   dental_hygiene: {
     key: 'dental_hygiene',
-    name: '치위생학부',
-    fullName: '치위생학부',
+    name: '치위생학과',
+    fullName: '치위생학과',
     description: '구강 건강 관리 및 치위생 전문 인력 양성',
     color: 'bg-green-500',
     icon: '🦷'

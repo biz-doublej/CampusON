@@ -86,7 +86,7 @@ export class DynamicDashboardRouter {
   static getDepartmentDisplayName(department: Department): string {
     const departmentNames: Record<Department, string> = {
       'nursing': '간호학부',
-      'dental_hygiene': '치위생학부',
+      'dental_hygiene': '치위생학과',
       'physical_therapy': '물리치료학과'
     };
 
