@@ -1,5 +1,16 @@
 import axios from 'axios';
-import { LoginRequest, RegisterRequest, User, ApiResponse, ProfessorAnalyticsData } from '@/types';
+import {
+  LoginRequest,
+  RegisterRequest,
+  User,
+  ApiResponse,
+  ProfessorAnalyticsData,
+  UserSettings,
+  UpdateUserSettingsPayload,
+  UpdateSocialLinkPayload,
+  SocialLinkSettings,
+  ChangePasswordPayload,
+} from '@/types';
 import { getApiUrl } from '../utils/config';
 
 // Dynamic API base URL from configuration
@@ -68,6 +79,30 @@ export const authAPI = {
   // 프로필 조회
   getProfile: async (): Promise<ApiResponse<User>> => {
     const response = await api.get('/api/auth/profile');
+    return response.data;
+  },
+
+  // 사용자 설정 조회
+  getSettings: async (): Promise<ApiResponse<UserSettings>> => {
+    const response = await api.get('/api/auth/settings');
+    return response.data;
+  },
+
+  // 사용자 설정 업데이트
+  updateSettings: async (payload: UpdateUserSettingsPayload): Promise<ApiResponse<UserSettings>> => {
+    const response = await api.patch('/api/auth/settings', payload);
+    return response.data;
+  },
+
+  // 소셜 연동 업데이트
+  updateSocialLink: async (payload: UpdateSocialLinkPayload): Promise<ApiResponse<SocialLinkSettings>> => {
+    const response = await api.patch('/api/auth/social', payload);
+    return response.data;
+  },
+
+  // 비밀번호 변경
+  changePassword: async (payload: ChangePasswordPayload): Promise<ApiResponse> => {
+    const response = await api.patch('/api/auth/password', payload);
     return response.data;
   },
 };

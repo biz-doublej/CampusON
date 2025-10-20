@@ -20,6 +20,7 @@ model User {
   department Department?
   profile_image String?
   year Int? // 학년 (학생의 경우)
+  settings Json?
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 

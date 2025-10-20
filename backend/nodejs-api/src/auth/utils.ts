@@ -20,6 +20,7 @@ interface User {
   department?: Department | null;
   profile_image?: string | null;
   year?: number | null;
+  settings?: Record<string, any> | null;
   created_at: Date;
   updated_at: Date;
 }

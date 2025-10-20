@@ -3,6 +3,35 @@
 // 지원되는 학과 타입
 export type Department = 'nursing' | 'dental_hygiene' | 'physical_therapy';
 
+export type SocialProvider = 'kakao' | 'google';
+
+export interface SocialLinkSettings {
+  connected: boolean;
+  externalEmail: string | null;
+  linkedAt: string | null;
+}
+
+export interface UserNotificationPreferences {
+  email: boolean;
+  sms: boolean;
+  push: boolean;
+  digest: boolean;
+}
+
+export interface UserAccountPreferences {
+  language: string;
+  timezone: string;
+}
+
+export interface UserSettings {
+  account: UserAccountPreferences;
+  notifications: UserNotificationPreferences;
+  social: {
+    kakao: SocialLinkSettings;
+    google: SocialLinkSettings;
+  };
+}
+
 export interface User {
   id: string;
   user_id: string;
@@ -11,6 +40,7 @@ export interface User {
   role: 'student' | 'professor' | 'admin';
   profile_image?: string;
   department?: Department;
+  settings?: UserSettings;
   created_at: string;
   updated_at: string;
 }
@@ -33,6 +63,22 @@ export interface ApiResponse<T = any> {
   data?: T;
   message?: string;
   error?: string;
+}
+
+export interface UpdateUserSettingsPayload {
+  account?: Partial<UserAccountPreferences>;
+  notifications?: Partial<UserNotificationPreferences>;
+}
+
+export interface UpdateSocialLinkPayload {
+  provider: SocialProvider;
+  connected: boolean;
+  externalEmail?: string | null;
+}
+
+export interface ChangePasswordPayload {
+  currentPassword: string;
+  newPassword: string;
 }
 
 export interface Question {

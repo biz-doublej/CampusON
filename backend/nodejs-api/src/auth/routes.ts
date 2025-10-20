@@ -1,19 +1,142 @@
 import express, { Request, Response } from 'express';
-import { 
-  createUser, 
-  authenticateUser, 
+import {
+  createUser,
+  authenticateUser,
   generateToken,
   isValidEmail,
   isValidPassword,
   findUserByEmail,
   findUserByUserId,
   findUserById,
-  createActivity
+  createActivity,
+  verifyPassword,
+  hashPassword,
 } from './utils';
+import { authenticateToken } from './middleware';
+import prisma from '../lib/prisma';
 
 // 타입 정의 (임시 해결책)
 type Role = 'STUDENT' | 'PROFESSOR' | 'ADMIN';
 type Department = 'NURSING' | 'DENTAL_HYGIENE' | 'PHYSICAL_THERAPY';
+type SocialProvider = 'kakao' | 'google';
+
+interface SocialLinkSettings {
+  connected: boolean;
+  externalEmail: string | null;
+  linkedAt: string | null;
+}
+
+interface UserSettings {
+  account: {
+    language: string;
+    timezone: string;
+  };
+  notifications: {
+    email: boolean;
+    sms: boolean;
+    push: boolean;
+    digest: boolean;
+  };
+  social: {
+    kakao: SocialLinkSettings;
+    google: SocialLinkSettings;
+  };
+}
+
+type UserAccountPreferences = UserSettings['account'];
+type UserNotificationPreferences = UserSettings['notifications'];
+
+type AuthenticatedRequest = Request & {
+  user?: {
+    id: string;
+    email: string;
+    role: string;
+  };
+};
+
+const DEFAULT_SETTINGS: UserSettings = {
+  account: {
+    language: 'ko',
+    timezone: 'Asia/Seoul',
+  },
+  notifications: {
+    email: true,
+    sms: false,
+    push: true,
+    digest: true,
+  },
+  social: {
+    kakao: {
+      connected: false,
+      externalEmail: null,
+      linkedAt: null,
+    },
+    google: {
+      connected: false,
+      externalEmail: null,
+      linkedAt: null,
+    },
+  },
+};
+
+const asBoolean = (value: unknown, fallback: boolean): boolean =>
+  typeof value === 'boolean' ? value : fallback;
+
+const asString = (value: unknown, fallback: string): string =>
+  typeof value === 'string' && value.length > 0 ? value : fallback;
+
+const normalizeSocial = (
+  raw: unknown,
+  defaults: SocialLinkSettings,
+): SocialLinkSettings => {
+  const input = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+  return {
+    connected: asBoolean(input.connected, defaults.connected),
+    externalEmail:
+      typeof input.externalEmail === 'string' && input.externalEmail.length > 0
+        ? input.externalEmail
+        : null,
+    linkedAt:
+      typeof input.linkedAt === 'string' && input.linkedAt.length > 0
+        ? input.linkedAt
+        : null,
+  };
+};
+
+const normalizeSettings = (raw?: unknown): UserSettings => {
+  if (!raw || typeof raw !== 'object') {
+    return {
+      account: { ...DEFAULT_SETTINGS.account },
+      notifications: { ...DEFAULT_SETTINGS.notifications },
+      social: {
+        kakao: { ...DEFAULT_SETTINGS.social.kakao },
+        google: { ...DEFAULT_SETTINGS.social.google },
+      },
+    };
+  }
+
+  const source = raw as Partial<UserSettings> & Record<string, any>;
+  const accountSource = (source.account ?? {}) as Partial<UserAccountPreferences> & Record<string, any>;
+  const notificationSource = (source.notifications ?? {}) as Partial<UserNotificationPreferences> & Record<string, any>;
+  const socialSource = (source.social ?? {}) as Partial<UserSettings['social']> & Record<string, any>;
+
+  return {
+    account: {
+      language: asString(accountSource.language, DEFAULT_SETTINGS.account.language),
+      timezone: asString(accountSource.timezone, DEFAULT_SETTINGS.account.timezone),
+    },
+    notifications: {
+      email: asBoolean(notificationSource.email, DEFAULT_SETTINGS.notifications.email),
+      sms: asBoolean(notificationSource.sms, DEFAULT_SETTINGS.notifications.sms),
+      push: asBoolean(notificationSource.push, DEFAULT_SETTINGS.notifications.push),
+      digest: asBoolean(notificationSource.digest, DEFAULT_SETTINGS.notifications.digest),
+    },
+    social: {
+      kakao: normalizeSocial(socialSource.kakao, DEFAULT_SETTINGS.social.kakao),
+      google: normalizeSocial(socialSource.google, DEFAULT_SETTINGS.social.google),
+    },
+  };
+};
 
 const router = express.Router();
 
@@ -194,12 +317,162 @@ router.post('/logout', (req: Request, res: Response) => {
   });
 });
 
+// 사용자 설정 조회
+router.get('/settings', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ success: false, message: '인증이 필요합니다.' });
+    }
+
+    const currentUser = await findUserById(req.user.id);
+    if (!currentUser) {
+      return res.status(404).json({ success: false, message: '사용자를 찾을 수 없습니다.' });
+    }
+
+    const settings = normalizeSettings(currentUser.settings);
+    return res.json({ success: true, data: settings });
+  } catch (error) {
+    console.error('Get settings error:', error);
+    return res.status(500).json({ success: false, message: '서버 오류가 발생했습니다.' });
+  }
+});
+
+// 사용자 설정 갱신
+router.patch('/settings', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ success: false, message: '인증이 필요합니다.' });
+    }
+
+    const { account, notifications } = req.body ?? {};
+    const currentUser = await findUserById(req.user.id);
+    if (!currentUser) {
+      return res.status(404).json({ success: false, message: '사용자를 찾을 수 없습니다.' });
+    }
+
+    const merged = normalizeSettings(currentUser.settings);
+
+    if (account && typeof account === 'object') {
+      merged.account = {
+        language: asString((account as any).language, merged.account.language),
+        timezone: asString((account as any).timezone, merged.account.timezone),
+      };
+    }
+
+    if (notifications && typeof notifications === 'object') {
+      merged.notifications = {
+        email: asBoolean((notifications as any).email, merged.notifications.email),
+        sms: asBoolean((notifications as any).sms, merged.notifications.sms),
+        push: asBoolean((notifications as any).push, merged.notifications.push),
+        digest: asBoolean((notifications as any).digest, merged.notifications.digest),
+      };
+    }
+
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: { settings: merged },
+    });
+
+    return res.json({ success: true, data: merged });
+  } catch (error) {
+    console.error('Update settings error:', error);
+    return res.status(500).json({ success: false, message: '서버 오류가 발생했습니다.' });
+  }
+});
+
+// 소셜 연동 설정
+router.patch('/social', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ success: false, message: '인증이 필요합니다.' });
+    }
+
+    const { provider, connected, externalEmail } = req.body ?? {};
+    if (!provider || !['kakao', 'google'].includes(provider)) {
+      return res.status(400).json({ success: false, message: '지원되지 않는 소셜 연동입니다.' });
+    }
+
+    if (connected && (!externalEmail || typeof externalEmail !== 'string')) {
+      return res.status(400).json({ success: false, message: '연동 시 이메일을 입력해주세요.' });
+    }
+
+    const currentUser = await findUserById(req.user.id);
+    if (!currentUser) {
+      return res.status(404).json({ success: false, message: '사용자를 찾을 수 없습니다.' });
+    }
+
+    const merged = normalizeSettings(currentUser.settings);
+    const key = provider as SocialProvider;
+    merged.social[key] = {
+      connected: Boolean(connected),
+      externalEmail: connected ? (externalEmail as string) : null,
+      linkedAt: connected ? new Date().toISOString() : null,
+    };
+
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: { settings: merged },
+    });
+
+    await createActivity(req.user.id, 'LOGIN', '소셜 연동 업데이트', `${provider} 연동 상태가 변경되었습니다.`);
+
+    return res.json({ success: true, data: merged.social[key] });
+  } catch (error) {
+    console.error('Social link error:', error);
+    return res.status(500).json({ success: false, message: '서버 오류가 발생했습니다.' });
+  }
+});
+
+// 비밀번호 변경
+router.patch('/password', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ success: false, message: '인증이 필요합니다.' });
+    }
+
+    const { currentPassword, newPassword } = req.body ?? {};
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ success: false, message: '현재 비밀번호와 새 비밀번호를 모두 입력해주세요.' });
+    }
+
+    if (!isValidPassword(newPassword)) {
+      return res.status(400).json({
+        success: false,
+        message: '새 비밀번호는 최소 8자 이상이며, 대문자/소문자/숫자/특수문자를 포함해야 합니다.',
+      });
+    }
+
+    const currentUser = await findUserById(req.user.id);
+    if (!currentUser) {
+      return res.status(404).json({ success: false, message: '사용자를 찾을 수 없습니다.' });
+    }
+
+    const matches = await verifyPassword(currentPassword, currentUser.password);
+    if (!matches) {
+      return res.status(401).json({ success: false, message: '현재 비밀번호가 올바르지 않습니다.' });
+    }
+
+    const hashed = await hashPassword(newPassword);
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: { password: hashed },
+    });
+
+    await createActivity(req.user.id, 'LOGIN', '비밀번호 변경', '계정 비밀번호가 변경되었습니다.');
+
+    return res.json({ success: true, message: '비밀번호가 변경되었습니다.' });
+  } catch (error) {
+    console.error('Change password error:', error);
+    return res.status(500).json({ success: false, message: '서버 오류가 발생했습니다.' });
+  }
+});
+
 // 프로필 조회 (인증 필요)
-router.get('/profile', async (req: Request, res: Response) => {
+router.get('/profile', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     // 미들웨어에서 설정된 사용자 정보 사용
-    const user = (req as any).user as { id: string; email: string; role: string };
-    
+    const user = req.user;
+
     if (!user) {
       return res.status(401).json({
         success: false,
