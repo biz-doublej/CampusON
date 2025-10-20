@@ -40,6 +40,10 @@ model Assignment {
   description String
   due_date DateTime
   status AssignmentStatus @default(DRAFT)
+  type AssignmentType @default(UPLOAD)
+  config Json?
+  tags String[] @default([])
+  resources Json?
   created_by String
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -155,6 +159,16 @@ enum AssignmentStatus {
   DRAFT
   PUBLISHED
   CLOSED
+}
+
+enum AssignmentType {
+  UPLOAD
+  QUIZ
+  PROJECT
+  PRACTICAL
+  PRESENTATION
+  REFLECTION
+  CLINICAL
 }
 
 enum ActivityType {

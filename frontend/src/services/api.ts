@@ -15,6 +15,7 @@ import {
   DashboardStatsResponse,
   UserGrade,
   AssignmentSummary,
+  CreateAssignmentPayload,
   AdminStatsResponse,
 } from '../types';
 import { getApiUrl } from '../utils/config';
@@ -224,7 +225,7 @@ export const assignmentsAPI = {
     return response.data;
   },
   // Create assignment (professor)
-  create: async (payload: { title: string; description: string; due_date: string; status?: 'draft' | 'published' }): Promise<ApiResponse<AssignmentSummary>> => {
+  create: async (payload: CreateAssignmentPayload): Promise<ApiResponse<AssignmentSummary>> => {
     const response = await api.post('/api/assignments', payload);
     return response.data;
   },

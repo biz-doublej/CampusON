@@ -4,6 +4,157 @@ import { authenticateToken } from '../auth/middleware';
 
 const router = express.Router();
 
+type AssignmentResource = {
+  title: string;
+  url: string;
+  description?: string;
+  type?: string;
+};
+
+type AssignmentConfig = {
+  instructions?: string;
+  submissionMethod?: string;
+  deliverables?: string[];
+  checklist?: string[];
+  allowLate?: boolean;
+  latePolicy?: string;
+  groupWork?: {
+    enabled: boolean;
+    minSize?: number;
+    maxSize?: number;
+  };
+  grading?: {
+    maxScore?: number;
+    rubric?: string;
+  };
+  evaluationCriteria?: string[];
+  notifyBeforeDays?: number;
+  additionalNotes?: string;
+};
+
+const ALLOWED_TYPES = new Set([
+  'UPLOAD',
+  'QUIZ',
+  'PROJECT',
+  'PRACTICAL',
+  'PRESENTATION',
+  'REFLECTION',
+  'CLINICAL',
+]);
+
+const sanitizeStringArray = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => (typeof item === 'string' ? item.trim() : ''))
+    .filter((item) => item.length > 0);
+};
+
+const sanitizeNumber = (value: unknown): number | undefined => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return undefined;
+};
+
+const sanitizeBoolean = (value: unknown): boolean | undefined => {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    if (value.toLowerCase() === 'true') return true;
+    if (value.toLowerCase() === 'false') return false;
+  }
+  return undefined;
+};
+
+const sanitizeResources = (value: unknown): AssignmentResource[] => {
+  if (!Array.isArray(value)) return [];
+  const resources: AssignmentResource[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== 'object') continue;
+    const record = item as Record<string, unknown>;
+    const title = typeof record.title === 'string' ? record.title.trim() : '';
+    const url = typeof record.url === 'string' ? record.url.trim() : '';
+    if (!title || !url) continue;
+    const resource: AssignmentResource = { title, url };
+    if (typeof record.description === 'string' && record.description.trim()) {
+      resource.description = record.description.trim();
+    }
+    if (typeof record.type === 'string' && record.type.trim()) {
+      resource.type = record.type.trim();
+    }
+    resources.push(resource);
+  }
+  return resources;
+};
+
+const sanitizeConfig = (value: unknown): AssignmentConfig | null => {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+  const raw = value as Record<string, unknown>;
+  const groupEnabled = sanitizeBoolean(raw.groupWork && (raw.groupWork as any).enabled) ?? false;
+  const config: AssignmentConfig = {};
+
+  if (typeof raw.instructions === 'string') {
+    const trimmed = raw.instructions.trim();
+    if (trimmed) config.instructions = trimmed;
+  }
+  if (typeof raw.submissionMethod === 'string' && raw.submissionMethod.trim()) {
+    config.submissionMethod = raw.submissionMethod.trim();
+  }
+
+  const deliverables = sanitizeStringArray(raw.deliverables);
+  if (deliverables.length) config.deliverables = deliverables;
+
+  const checklist = sanitizeStringArray(raw.checklist);
+  if (checklist.length) config.checklist = checklist;
+
+  const allowLate = sanitizeBoolean(raw.allowLate);
+  if (typeof allowLate === 'boolean') {
+    config.allowLate = allowLate;
+    if (allowLate && typeof raw.latePolicy === 'string' && raw.latePolicy.trim()) {
+      config.latePolicy = raw.latePolicy.trim();
+    }
+  }
+
+  const groupConfig = raw.groupWork && typeof raw.groupWork === 'object' ? (raw.groupWork as Record<string, unknown>) : null;
+  if (groupEnabled || groupConfig) {
+    config.groupWork = {
+      enabled: groupEnabled,
+      minSize: sanitizeNumber(groupConfig?.minSize),
+      maxSize: sanitizeNumber(groupConfig?.maxSize),
+    };
+  }
+
+  const maxScore = sanitizeNumber(raw.maxScore ?? (raw.grading as any)?.maxScore);
+  const rubric =
+    typeof (raw.rubric ?? (raw.grading as any)?.rubric) === 'string'
+      ? String(raw.rubric ?? (raw.grading as any)?.rubric).trim()
+      : undefined;
+  if (maxScore !== undefined || rubric) {
+    config.grading = {};
+    if (maxScore !== undefined) config.grading.maxScore = maxScore;
+    if (rubric) config.grading.rubric = rubric;
+  }
+
+  const evaluation = sanitizeStringArray(raw.evaluationCriteria ?? (raw.grading as any)?.criteria);
+  if (evaluation.length) {
+    config.evaluationCriteria = evaluation;
+  }
+
+  const notifyBeforeDays = sanitizeNumber(raw.notifyBeforeDays);
+  if (notifyBeforeDays !== undefined) {
+    config.notifyBeforeDays = notifyBeforeDays;
+  }
+
+  if (typeof raw.additionalNotes === 'string' && raw.additionalNotes.trim()) {
+    config.additionalNotes = raw.additionalNotes.trim();
+  }
+
+  return Object.keys(config).length ? config : null;
+};
+
 // Helper to normalize assignment to frontend shape
 const toDto = (a: any) => ({
   id: a.id,
@@ -11,6 +162,10 @@ const toDto = (a: any) => ({
   description: a.description,
   due_date: a.due_date.toISOString(),
   status: String(a.status || '').toLowerCase(),
+  type: String(a.type || 'UPLOAD'),
+  config: a.config || null,
+  tags: Array.isArray(a.tags) ? a.tags : [],
+  resources: Array.isArray(a.resources) ? a.resources : [],
   created_by: a.created_by,
   created_at: a.created_at.toISOString(),
   updated_at: a.updated_at.toISOString(),
@@ -22,10 +177,16 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
     const auth = (req as any).user as { id: string; role: string };
     if (!auth?.id) return res.status(401).json({ success: false, message: 'Unauthorized' });
 
-    const { title, description, due_date, status } = req.body || {};
+    const { title, description, due_date, status, type, config, tags, resources } = req.body || {};
     if (!title || !description || !due_date) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
+
+    const draftType = typeof type === 'string' ? type.toUpperCase() : 'UPLOAD';
+    const normalizedType = ALLOWED_TYPES.has(draftType) ? draftType : 'UPLOAD';
+    const normalizedTags = sanitizeStringArray(tags);
+    const normalizedResources = sanitizeResources(resources);
+    const normalizedConfig = sanitizeConfig(config);
 
     const created = await prisma.assignment.create({
       data: {
@@ -33,6 +194,10 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
         description,
         due_date: new Date(due_date),
         status: (String(status || 'DRAFT').toUpperCase() as any),
+        type: normalizedType as any,
+        config: normalizedConfig ?? undefined,
+        tags: normalizedTags,
+        resources: normalizedResources.length ? normalizedResources : undefined,
         created_by: auth.id,
       },
     });

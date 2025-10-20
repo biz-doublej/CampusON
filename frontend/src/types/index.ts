@@ -94,15 +94,77 @@ export interface ChangePasswordPayload {
   newPassword: string;
 }
 
+export type AssignmentType =
+  | 'UPLOAD'
+  | 'QUIZ'
+  | 'PROJECT'
+  | 'PRACTICAL'
+  | 'PRESENTATION'
+  | 'REFLECTION'
+  | 'CLINICAL';
+
+export type SubmissionMethod =
+  | 'file'
+  | 'link'
+  | 'quiz'
+  | 'presentation'
+  | 'in_person'
+  | 'lab_report'
+  | 'portfolio'
+  | 'simulation';
+
+export interface AssignmentResource {
+  title: string;
+  url: string;
+  description?: string;
+  type?: string;
+}
+
+export interface AssignmentConfig {
+  instructions?: string;
+  submissionMethod?: SubmissionMethod | string;
+  deliverables?: string[];
+  checklist?: string[];
+  allowLate?: boolean;
+  latePolicy?: string;
+  groupWork?: {
+    enabled: boolean;
+    minSize?: number;
+    maxSize?: number;
+  };
+  grading?: {
+    maxScore?: number;
+    rubric?: string;
+  };
+  evaluationCriteria?: string[];
+  notifyBeforeDays?: number;
+  additionalNotes?: string;
+}
+
 export interface AssignmentSummary {
   id: string;
   title: string;
   description: string;
   due_date: string;
   status: 'draft' | 'published' | 'closed';
+  type: AssignmentType;
+  config?: AssignmentConfig | null;
+  tags?: string[];
+  resources?: AssignmentResource[];
   created_by: string;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface CreateAssignmentPayload {
+  title: string;
+  description: string;
+  due_date: string;
+  status?: 'draft' | 'published' | 'closed';
+  type: AssignmentType;
+  config?: AssignmentConfig | null;
+  tags?: string[];
+  resources?: AssignmentResource[];
 }
 
 export interface Question {
@@ -123,6 +185,10 @@ export interface Assignment {
   description: string;
   questions: Question[];
   due_date: string;
+  type: AssignmentType;
+  config?: AssignmentConfig | null;
+  tags?: string[];
+  resources?: AssignmentResource[];
   created_by: string;
   status: 'draft' | 'published' | 'closed';
 }
