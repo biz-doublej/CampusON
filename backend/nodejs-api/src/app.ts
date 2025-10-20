@@ -7,8 +7,9 @@ import usersRoutes from './users/routes';
 import dashboardRoutes from './dashboard/routes';
 import { authenticateToken } from './auth/middleware';
 import assignmentsRoutes from './assignments/routes';
-import aiRoutes from './ai/routes';
 import adminRoutes from './admin/routes';
+import aiRoutes from './ai/routes';
+import professorRoutes from './professor/routes';
 import studentsRoutes from './students/routes';
 
 const app = express();
@@ -93,6 +94,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/assignments', assignmentsRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/professor', professorRoutes);
 // Students Routes
 app.use('/api/students', studentsRoutes);
 

@@ -105,25 +105,40 @@ router.get('/:id/grades', authenticateToken, async (req: Request, res: Response)
   try {
     const { id } = req.params;
 
-    const results = await prisma.testResult.findMany({
+    const resultsRaw = await prisma.testResult.findMany({
       where: { user_id: id },
       orderBy: { completed_at: 'desc' },
       include: {
         assignment: true,
       },
     });
+    type ResultWithAssignment = {
+      id: string;
+      assignment_id: string;
+      score: number;
+      total_questions: number;
+      correct_answers: number;
+      time_spent: number;
+      completed_at: Date;
+      assignment: {
+        title?: string | null;
+        status?: string | null;
+        due_date?: Date | null;
+      } | null;
+    };
+    const results = resultsRaw as ResultWithAssignment[];
 
-    const data = results.map((r) => ({
-      id: r.id,
-      assignment_id: r.assignment_id,
-      assignment_title: (r as any).assignment?.title || '',
-      score: r.score,
-      total_questions: r.total_questions,
-      correct_answers: r.correct_answers,
-      time_spent: r.time_spent,
-      completed_at: r.completed_at,
-      status: (r as any).assignment?.status || 'PUBLISHED',
-      due_date: (r as any).assignment?.due_date || null,
+    const data = results.map((row) => ({
+      id: row.id,
+      assignment_id: row.assignment_id,
+      assignment_title: row.assignment?.title || '',
+      score: row.score,
+      total_questions: row.total_questions,
+      correct_answers: row.correct_answers,
+      time_spent: row.time_spent,
+      completed_at: row.completed_at,
+      status: row.assignment?.status || 'PUBLISHED',
+      due_date: row.assignment?.due_date || null,
     }));
 
     return res.json({ success: true, data });

@@ -163,4 +163,55 @@ export interface Notification {
   read: boolean;
   created_at: string;
   user_id: string;
-} 
+}
+
+export interface ProfessorAnalyticsSummary {
+  totalStudents: number;
+  totalAssignments: number;
+  assignmentsPublished: number;
+  pendingReviews: number;
+  averageScore: number;
+  completionRate: number;
+  submissions: number;
+  expectedSubmissions: number;
+}
+
+export interface ProfessorScoreDistributionBucket {
+  label: string;
+  count: number;
+  percentage: number;
+}
+
+export interface ProfessorAssignmentPerformance {
+  id: string;
+  title: string;
+  dueDate: string | null;
+  status: string;
+  submissionCount: number;
+  averageScore: number;
+  completionRate: number;
+}
+
+export interface ProfessorCompletionTrendPoint {
+  key: string;
+  label: string;
+  submissions: number;
+}
+
+export interface ProfessorTopStudent {
+  id: string;
+  userId: string;
+  name: string;
+  email: string;
+  department: string | null;
+  averageScore: number;
+  submissions: number;
+}
+
+export interface ProfessorAnalyticsData {
+  summary: ProfessorAnalyticsSummary;
+  scoreDistribution: ProfessorScoreDistributionBucket[];
+  assignmentPerformance: ProfessorAssignmentPerformance[];
+  completionTrend: ProfessorCompletionTrendPoint[];
+  topStudents: ProfessorTopStudent[];
+}

@@ -49,8 +49,22 @@ router.get('/v2/activities', authenticateToken, async (req: Request, res: Respon
   try {
     const auth = (req as any).user as { id: string };
     if (!auth?.id) return res.status(401).json({ success: false, message: 'Unauthorized' });
-    const rows = await prisma.activity.findMany({ where: { user_id: auth.id }, orderBy: { timestamp: 'desc' }, take: 10 });
-    const data = rows.map(r => ({ id: r.id, type: String(r.type || '').toLowerCase(), title: r.title, description: r.description, timestamp: r.timestamp.toISOString() }));
+    const rowsRaw = await prisma.activity.findMany({ where: { user_id: auth.id }, orderBy: { timestamp: 'desc' }, take: 10 });
+    type ActivityRow = {
+      id: string;
+      type: string | null;
+      title: string;
+      description: string | null;
+      timestamp: Date;
+    };
+    const rows = rowsRaw as ActivityRow[];
+    const data = rows.map((row) => ({
+      id: row.id,
+      type: String(row.type || '').toLowerCase(),
+      title: row.title,
+      description: row.description,
+      timestamp: row.timestamp.toISOString(),
+    }));
     return res.json({ success: true, data });
   } catch (e) {
     console.error('Dashboard v2 activities error:', e);
@@ -59,4 +73,3 @@ router.get('/v2/activities', authenticateToken, async (req: Request, res: Respon
 });
 
 export default router;
-

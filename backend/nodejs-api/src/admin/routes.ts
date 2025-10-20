@@ -15,7 +15,7 @@ router.get('/stats', authenticateToken, async (req: Request, res: Response) => {
     const isAdmin = String(auth.role || '').toUpperCase() === 'ADMIN';
     if (!isAdmin) return res.status(403).json({ success: false, message: 'Forbidden' });
 
-    const [total_users, total_students, total_professors, total_assignments, activities, testAgg] = await Promise.all([
+    const [total_users, total_students, total_professors, total_assignments, activitiesRaw, testAgg] = await Promise.all([
       prisma.user.count(),
       prisma.user.count({ where: { role: 'STUDENT' } }),
       prisma.user.count({ where: { role: 'PROFESSOR' } }),
@@ -23,18 +23,27 @@ router.get('/stats', authenticateToken, async (req: Request, res: Response) => {
       prisma.activity.findMany({ orderBy: { timestamp: 'desc' }, take: 5, include: { user: { select: { id: true, name: true, email: true } } } }),
       prisma.testResult.aggregate({ _avg: { score: true } }),
     ]);
+    type ActivityRow = {
+      id: string;
+      type: string | null;
+      title: string;
+      description: string | null;
+      timestamp: Date;
+      user: { id: string; name: string | null; email: string | null } | null;
+    };
+    const activities = activitiesRaw as ActivityRow[];
 
     // Active users in last 7 days
     const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const active_users = await prisma.activity.findMany({ where: { timestamp: { gte: since } }, distinct: ['user_id'], select: { user_id: true } });
 
-    const recent_activities = activities.map(a => ({
-      id: a.id,
-      type: String(a.type || '').toLowerCase(),
-      title: a.title,
-      description: a.description,
-      timestamp: a.timestamp.toISOString(),
-      user: a.user,
+    const recent_activities = activities.map((activity) => ({
+      id: activity.id,
+      type: String(activity.type || '').toLowerCase(),
+      title: activity.title,
+      description: activity.description,
+      timestamp: activity.timestamp.toISOString(),
+      user: activity.user,
     }));
 
     return res.json({

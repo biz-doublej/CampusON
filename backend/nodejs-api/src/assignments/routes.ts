@@ -148,7 +148,7 @@ router.get('/:id/submissions', authenticateToken, async (req: Request, res: Resp
     const isAdmin = String(auth.role || '').toUpperCase() === 'ADMIN';
     if (!isCreator && !isAdmin) return res.status(403).json({ success: false, message: 'Forbidden' });
 
-    const activities = await prisma.activity.findMany({
+    const activitiesRaw = await prisma.activity.findMany({
       where: {
         type: 'UPLOAD',
         description: { contains: `assignment=${id}` },
@@ -158,6 +158,13 @@ router.get('/:id/submissions', authenticateToken, async (req: Request, res: Resp
         user: { select: { id: true, name: true, email: true } },
       },
     });
+    type SubmissionActivity = {
+      id: string;
+      description: string | null;
+      timestamp: Date;
+      user: { id: string; name: string | null; email: string | null } | null;
+    };
+    const activities = activitiesRaw as SubmissionActivity[];
 
     const parse = (desc: string | null): { url?: string; note?: string } => {
       if (!desc) return {};
@@ -170,11 +177,11 @@ router.get('/:id/submissions', authenticateToken, async (req: Request, res: Resp
       return out;
     };
 
-    const data = activities.map((r) => ({
-      id: r.id,
-      user: r.user,
-      submitted_at: r.timestamp.toISOString(),
-      ...parse(r.description || ''),
+    const data = activities.map((activity) => ({
+      id: activity.id,
+      user: activity.user,
+      submitted_at: activity.timestamp.toISOString(),
+      ...parse(activity.description || ''),
     }));
 
     return res.json({ success: true, data });

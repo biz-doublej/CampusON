@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { LoginRequest, RegisterRequest, User, ApiResponse } from '@/types';
+import { LoginRequest, RegisterRequest, User, ApiResponse, ProfessorAnalyticsData } from '@/types';
 import { getApiUrl } from '../utils/config';
 
 // Dynamic API base URL from configuration
@@ -153,6 +153,14 @@ export const adminAPI = {
   },
   getReports: async (): Promise<ApiResponse<any>> => {
     const response = await api.get('/api/admin/reports');
+    return response.data;
+  },
+};
+
+// Professor API
+export const professorAPI = {
+  getAnalytics: async (): Promise<ApiResponse<ProfessorAnalyticsData>> => {
+    const response = await api.get('/api/professor/analytics');
     return response.data;
   },
 };
