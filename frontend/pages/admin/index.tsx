@@ -4,14 +4,14 @@ import ProtectedRoute from '../../src/components/ProtectedRoute';
 import ChatWidget from '../../src/components/chat/ChatWidget';
 import FileUploader from '../../src/components/FileUploader';
 import ParsedResultViewer from '../../src/components/ParsedResultViewer';
-import type { User, DashboardStats } from '../../src/types';
+import type { User, AdminStatsResponse } from '../../src/types';
 import { ParsedResult } from '../../src/services/parserService';
 import { adminAPI } from '../../src/services/api';
 
 const AdminDashboard: React.FC = () => {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
-  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [stats, setStats] = useState<AdminStatsResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [parsedResult, setParsedResult] = useState<ParsedResult | null>(null);
   const [showParser, setShowParser] = useState<boolean>(false);
@@ -35,10 +35,14 @@ const AdminDashboard: React.FC = () => {
         setStats({
           total_users: 150,
           active_users: 132,
-          total_courses: 25,
+          total_students: 120,
+          total_professors: 18,
+          total_assignments: 45,
+          average_score: 87.2,
           system_health: 98.5,
-          recent_activities: []
-        } as any);
+          total_courses: 25,
+          recent_activities: [],
+        });
       } catch (error) {
         console.error('관리자 대시보드 데이터 로딩 실패:', error);
       } finally {
@@ -178,7 +182,7 @@ const AdminDashboard: React.FC = () => {
                         총 사용자
                       </dt>
                       <dd className="text-lg font-medium text-gray-900">
-                        {(stats as any)?.total_users || 0}명
+                        {stats?.total_users ?? 0}명
                       </dd>
                     </dl>
                   </div>
@@ -200,7 +204,7 @@ const AdminDashboard: React.FC = () => {
                         활성 사용자
                       </dt>
                       <dd className="text-lg font-medium text-gray-900">
-                        {(stats as any)?.active_users || 0}명
+                        {stats?.active_users ?? 0}명
                       </dd>
                     </dl>
                   </div>
@@ -222,7 +226,7 @@ const AdminDashboard: React.FC = () => {
                         총 과정
                       </dt>
                       <dd className="text-lg font-medium text-gray-900">
-                        {(stats as any)?.total_courses || 0}개
+                        {stats?.total_courses ?? 0}개
                       </dd>
                     </dl>
                   </div>
@@ -244,7 +248,7 @@ const AdminDashboard: React.FC = () => {
                         시스템 상태
                       </dt>
                       <dd className="text-lg font-medium text-gray-900">
-                        {(stats as any)?.system_health ? `${(stats as any).system_health}%` : 'N/A'}
+                        {stats?.system_health != null ? `${stats.system_health}%` : 'N/A'}
                       </dd>
                     </dl>
                   </div>

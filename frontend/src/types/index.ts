@@ -32,6 +32,19 @@ export interface UserSettings {
   };
 }
 
+export interface UserGrade {
+  id: string;
+  assignment_id: string;
+  assignment_title: string;
+  score: number;
+  total_questions: number;
+  correct_answers: number;
+  time_spent: number;
+  completed_at: string;
+  status: string;
+  due_date: string | null;
+}
+
 export interface User {
   id: string;
   user_id: string;
@@ -81,6 +94,17 @@ export interface ChangePasswordPayload {
   newPassword: string;
 }
 
+export interface AssignmentSummary {
+  id: string;
+  title: string;
+  description: string;
+  due_date: string;
+  status: 'draft' | 'published' | 'closed';
+  created_by: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface Question {
   id: string;
   title: string;
@@ -121,6 +145,13 @@ export interface DashboardStats {
   recent_activities: Activity[];
 }
 
+export interface StudentDashboardSummary {
+  total_assignments: number;
+  completed_assignments: number;
+  average_score: number;
+  recent_activities: Activity[];
+}
+
 export interface Activity {
   id: string;
   type: 'assignment' | 'test' | 'grade' | 'login' | 'upload';
@@ -135,6 +166,18 @@ export interface AdminDashboardStats {
   active_users: number;
   total_courses: number;
   system_health: number;
+  recent_activities: Activity[];
+}
+
+export interface AdminStatsResponse {
+  total_users: number;
+  active_users: number;
+  total_students: number;
+  total_professors: number;
+  total_assignments: number;
+  average_score: number;
+  system_health: number;
+  total_courses?: number;
   recent_activities: Activity[];
 }
 
@@ -168,6 +211,11 @@ export interface RoleBasedNavigation {
   professor: NavigationItem[];
   student: NavigationItem[];
 }
+
+export type DashboardStatsResponse =
+  | DashboardStats
+  | ProfessorDashboardStats
+  | StudentDashboardSummary;
 
 // 권한 체크 타입
 export type UserRole = 'student' | 'professor' | 'admin';

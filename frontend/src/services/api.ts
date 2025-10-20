@@ -10,6 +10,12 @@ import {
   UpdateSocialLinkPayload,
   SocialLinkSettings,
   ChangePasswordPayload,
+  Activity,
+  DashboardStats,
+  DashboardStatsResponse,
+  UserGrade,
+  AssignmentSummary,
+  AdminStatsResponse,
 } from '@/types';
 import { getApiUrl } from '../utils/config';
 
@@ -110,13 +116,13 @@ export const authAPI = {
 // 대시보드 API
 export const dashboardAPI = {
   // 통계 조회
-  getStats: async (): Promise<ApiResponse<any>> => {
+  getStats: async (): Promise<ApiResponse<DashboardStats>> => {
     const response = await api.get('/api/dashboard/stats');
     return response.data;
   },
 
   // 활동 조회
-  getActivities: async (): Promise<ApiResponse<any[]>> => {
+  getActivities: async (): Promise<ApiResponse<Activity[]>> => {
     const response = await api.get('/api/dashboard/activities');
     return response.data;
   },
@@ -124,7 +130,7 @@ export const dashboardAPI = {
 
 // v2 Dashboard API with dynamic stats
 export const dashboardAPIV2 = {
-  getStats: async (): Promise<ApiResponse<any>> => {
+  getStats: async (): Promise<ApiResponse<DashboardStatsResponse>> => {
     try {
       const response = await api.get('/api/dashboard/v2/stats');
       return response.data;
@@ -133,7 +139,7 @@ export const dashboardAPIV2 = {
       return response.data;
     }
   },
-  getActivities: async (): Promise<ApiResponse<any[]>> => {
+  getActivities: async (): Promise<ApiResponse<Activity[]>> => {
     try {
       const response = await api.get('/api/dashboard/v2/activities');
       return response.data;
@@ -147,18 +153,18 @@ export const dashboardAPIV2 = {
 // Users API
 export const usersAPI = {
   // List students by department (department key: 'nursing' | 'dental_hygiene' | 'physical_therapy')
-  getStudents: async (department?: string): Promise<ApiResponse<any[]>> => {
+  getStudents: async (department?: string): Promise<ApiResponse<User[]>> => {
     const params = department ? { department } : undefined;
     const response = await api.get('/api/users/students', { params });
     return response.data;
   },
   // Get user detail
-  getUser: async (userId: string): Promise<ApiResponse<any>> => {
+  getUser: async (userId: string): Promise<ApiResponse<User>> => {
     const response = await api.get(`/api/users/${userId}`);
     return response.data;
   },
   // Get user grades
-  getUserGrades: async (userId: string): Promise<ApiResponse<any[]>> => {
+  getUserGrades: async (userId: string): Promise<ApiResponse<UserGrade[]>> => {
     const response = await api.get(`/api/users/${userId}/grades`);
     return response.data;
   },
@@ -166,27 +172,27 @@ export const usersAPI = {
 
 // Admin API
 export const adminAPI = {
-  getStats: async (): Promise<ApiResponse<any>> => {
+  getStats: async (): Promise<ApiResponse<AdminStatsResponse>> => {
     const response = await api.get('/api/admin/stats');
     return response.data;
   },
-  getMonitor: async (): Promise<ApiResponse<any>> => {
+  getMonitor: async (): Promise<ApiResponse<Record<string, unknown>>> => {
     const response = await api.get('/api/admin/monitor');
     return response.data;
   },
-  getSettings: async (): Promise<ApiResponse<any>> => {
+  getSettings: async (): Promise<ApiResponse<Record<string, unknown>>> => {
     const response = await api.get('/api/admin/settings');
     return response.data;
   },
-  updateSettings: async (payload: any): Promise<ApiResponse<any>> => {
+  updateSettings: async (payload: Record<string, unknown>): Promise<ApiResponse<Record<string, unknown>>> => {
     const response = await api.put('/api/admin/settings', payload);
     return response.data;
   },
-  listUsers: async (params?: { role?: string; department?: string; q?: string }): Promise<ApiResponse<any[]>> => {
+  listUsers: async (params?: { role?: string; department?: string; q?: string }): Promise<ApiResponse<User[]>> => {
     const response = await api.get('/api/admin/users', { params });
     return response.data;
   },
-  getReports: async (): Promise<ApiResponse<any>> => {
+  getReports: async (): Promise<ApiResponse<Record<string, unknown>>> => {
     const response = await api.get('/api/admin/reports');
     return response.data;
   },
@@ -213,27 +219,27 @@ export const studentsAPI = {
 // Assignments API
 export const assignmentsAPI = {
   // List assignments (server filters by role)
-  list: async (): Promise<ApiResponse<any[]>> => {
+  list: async (): Promise<ApiResponse<AssignmentSummary[]>> => {
     const response = await api.get('/api/assignments');
     return response.data;
   },
   // Create assignment (professor)
-  create: async (payload: { title: string; description: string; due_date: string; status?: 'draft' | 'published' }): Promise<ApiResponse<any>> => {
+  create: async (payload: { title: string; description: string; due_date: string; status?: 'draft' | 'published' }): Promise<ApiResponse<AssignmentSummary>> => {
     const response = await api.post('/api/assignments', payload);
     return response.data;
   },
   // Get assignment detail
-  get: async (id: string): Promise<ApiResponse<any>> => {
+  get: async (id: string): Promise<ApiResponse<AssignmentSummary>> => {
     const response = await api.get(`/api/assignments/${id}`);
     return response.data;
   },
   // Update status
-  updateStatus: async (id: string, status: 'draft' | 'published' | 'closed'): Promise<ApiResponse<any>> => {
+  updateStatus: async (id: string, status: 'draft' | 'published' | 'closed'): Promise<ApiResponse<AssignmentSummary>> => {
     const response = await api.patch(`/api/assignments/${id}/status`, { status });
     return response.data;
   },
   // Submit upload metadata
-  submit: async (id: string, payload: { note?: string; url?: string }): Promise<ApiResponse<any>> => {
+  submit: async (id: string, payload: { note?: string; url?: string }): Promise<ApiResponse<{ id: string }>> => {
     const response = await api.post(`/api/assignments/${id}/submissions`, payload);
     return response.data;
   },
