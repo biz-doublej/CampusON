@@ -1,4 +1,4 @@
-import { Department } from '@/types';
+import { Department } from '../types';
 
 // 지원되는 학과 정보
 export interface DepartmentInfo {

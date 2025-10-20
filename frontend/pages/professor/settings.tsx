@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import Head from 'next/head';
 import ProtectedRoute from '../../src/components/ProtectedRoute';
-import { authAPI } from '@/services/api';
+import { authAPI } from '../../src/services/api';
 import type {
   UserSettings,
   UserAccountPreferences,
   UserNotificationPreferences,
   SocialProvider,
-} from '@/types';
+} from '../../src/types';
 
 const DEFAULT_ACCOUNT: UserAccountPreferences = {
   language: 'ko',

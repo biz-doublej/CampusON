@@ -16,7 +16,7 @@ import {
   UserGrade,
   AssignmentSummary,
   AdminStatsResponse,
-} from '@/types';
+} from '../types';
 import { getApiUrl } from '../utils/config';
 
 // Dynamic API base URL from configuration

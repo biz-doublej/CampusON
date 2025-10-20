@@ -42,7 +42,7 @@ export class DynamicDashboardRouter {
         // Students are routed based on their department
         if (department) {
           try {
-            const depKey = normalizeDepartment(department as any);
+            const depKey = normalizeDepartment(department);
             const departmentPath = getDepartmentDashboardPath(depKey);
             const departmentName = this.getDepartmentDisplayName(depKey);
             

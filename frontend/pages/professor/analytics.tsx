@@ -1,14 +1,14 @@
 import React, { useEffect, useState, useMemo, useId } from 'react';
 import Head from 'next/head';
 import ProtectedRoute from '../../src/components/ProtectedRoute';
-import { professorAPI } from '@/services/api';
+import { professorAPI } from '../../src/services/api';
 import type {
   ProfessorAnalyticsData,
   ProfessorScoreDistributionBucket,
   ProfessorAssignmentPerformance,
   ProfessorCompletionTrendPoint,
   ProfessorTopStudent,
-} from '@/types';
+} from '../../src/types';
 
 const formatNumber = (value: number, suffix = '') => `${value.toLocaleString()}${suffix}`;
 const formatPercent = (value: number) => `${value.toFixed(1)}%`;
@@ -240,8 +240,15 @@ export default function ProfessorAnalyticsPage() {
         } else {
           setAnalytics(response.data);
         }
-      } catch (err: any) {
-        setError(err?.response?.data?.message || '지표 데이터를 불러오는 중 오류가 발생했습니다.');
+      } catch (err: unknown) {
+        const fallback = '지표 데이터를 불러오는 중 오류가 발생했습니다.';
+        if (err && typeof err === 'object') {
+          const maybeResponse = (err as { response?: { data?: { message?: string } } }).response;
+          const message = maybeResponse?.data?.message;
+          setError(typeof message === 'string' ? message : fallback);
+        } else {
+          setError(fallback);
+        }
       } finally {
         setLoading(false);
       }
