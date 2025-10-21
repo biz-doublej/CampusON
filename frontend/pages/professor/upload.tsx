@@ -360,7 +360,12 @@ const ProfessorUploadPage: React.FC = () => {
                 </div>
 
                 {/* 파싱 결과 뷰어 컴포넌트 */}
-                {parsedResult && <ParsedResultViewer result={parsedResult} />}
+                {parsedResult && (
+                  <ParsedResultViewer
+                    result={parsedResult}
+                    onUpdate={(next) => setParsedResult(next)}
+                  />
+                )}
                 {parsedResult && (
                   <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="bg-white border rounded-lg p-4">

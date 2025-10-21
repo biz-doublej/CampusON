@@ -3,14 +3,20 @@ import { ParsedQuestion, ParsedResult } from '../services/parserService';
 
 interface ParsedResultViewerProps {
   result: ParsedResult;
+  onUpdate?: (next: ParsedResult) => void;
 }
 
-const ParsedResultViewer: React.FC<ParsedResultViewerProps> = ({ result }) => {
+const ParsedResultViewer: React.FC<ParsedResultViewerProps> = ({ result, onUpdate }) => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [showAnswers, setShowAnswers] = useState(false);
 
   const { questions, metadata } = result;
   const currentQuestion = questions[currentQuestionIndex];
+
+  const updateQuestion = (index: number, patch: Partial<ParsedQuestion>) => {
+    const nextQuestions = questions.map((q, i) => (i === index ? { ...q, ...patch } : q));
+    onUpdate?.({ ...result, questions: nextQuestions });
+  };
 
   // 다음 문제로 이동
   const handleNextQuestion = () => {
@@ -162,27 +168,32 @@ const ParsedResultViewer: React.FC<ParsedResultViewerProps> = ({ result }) => {
                 
                 <div className="space-y-3">
                   <h4 className="text-sm font-medium text-gray-700">선택지</h4>
-                  {Object.entries(currentQuestion.options).map(([key, value]) => (
-                    <div 
-                      key={key}
-                      className={`p-4 rounded-lg border transition-colors ${
-                        showAnswers && currentQuestion.answer === key 
-                          ? 'bg-green-50 border-green-200' 
-                          : 'bg-white border-gray-200'
-                      }`}
-                    >
-                      <div className="flex items-start">
-                        <span className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-sm font-medium mr-3 ${
-                          showAnswers && currentQuestion.answer === key 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-gray-100 text-gray-700'
-                        }`}>
-                          {key}
-                        </span>
-                        <span className="text-gray-900">{value}</span>
-                      </div>
-                    </div>
-                  ))}
+                  {Object.entries(currentQuestion.options).map(([key, value]) => {
+                    const isAnswer = currentQuestion.answer === key;
+                    return (
+                      <button
+                        type="button"
+                        key={key}
+                        onClick={() => updateQuestion(currentQuestionIndex, { answer: key })}
+                        className={`w-full text-left p-4 rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-green-200 ${
+                          isAnswer
+                            ? 'bg-green-50 border-green-200'
+                            : 'bg-white border-gray-200 hover:border-green-200'
+                        }`}
+                      >
+                        <div className="flex items-start">
+                          <span
+                            className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-sm font-medium mr-3 ${
+                              isAnswer ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'
+                            }`}
+                          >
+                            {key}
+                          </span>
+                          <span className="text-gray-900">{value}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
