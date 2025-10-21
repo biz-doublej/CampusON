@@ -37,7 +37,7 @@ export const parserService = {
       formData.append('file', file);
 
       // 실제 API 호출
-      const response = await axios.post(`${PARSER_API_URL}/api/parse`, formData, {
+      const response = await axios.post(`${PARSER_API_URL}/api/parse?auto_ingest=false&auto_save=false`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
