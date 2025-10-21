@@ -59,6 +59,12 @@ router.post('/chat', authenticateToken, async (req: Request, res: Response) => {
       }
     }
 
+    const isInsufficient = (answer: string | null) => {
+      if (!answer) return true;
+      const normalized = answer.replace(/\s+/g, '').trim();
+      return normalized.length === 0 || normalized.includes('관련정보가부족합니다');
+    };
+
     const canUseGemini = Boolean(apiKey && GoogleGenerativeAI);
     let geminiAnswer: string | null = null;
 
@@ -89,7 +95,7 @@ router.post('/chat', authenticateToken, async (req: Request, res: Response) => {
     }
 
     const sections: string[] = [];
-    if (deepAnswer) sections.push(`📘 학사 도우미\n${deepAnswer.trim()}`);
+    if (!isInsufficient(deepAnswer)) sections.push(`📘 학사 도우미\n${deepAnswer?.trim()}`);
     if (geminiAnswer) sections.push(`💡 일반 지식\n${geminiAnswer.trim()}`);
     const combined = sections.join('\n\n').trim();
     const finalAnswer = combined || '답변을 생성하지 못했습니다. 다른 표현으로 질문해 보세요.';
