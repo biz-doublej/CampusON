@@ -14,14 +14,17 @@ export default function ProfessorQuestionsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<QItem | null>(null);
-  const [limit] = useState<number>(25);
+  const PAGE_PRESETS = [25, 50, 100];
+  const [pageSize, setPageSize] = useState<number>(25);
   const [offset, setOffset] = useState<number>(0);
+  const [showAll, setShowAll] = useState<boolean>(false);
 
   const load = async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await questionService.list(limit, offset);
+      const effectiveLimit = showAll ? 1000 : pageSize;
+      const res = await questionService.list(effectiveLimit, showAll ? 0 : offset);
       setItems(res.items || []);
     } catch (e: any) {
       console.error(e);
@@ -31,7 +34,11 @@ export default function ProfessorQuestionsPage() {
     }
   };
 
-  useEffect(() => { load(); /* reset selection when page changes */ setSelected({}); setPreview(null); }, [offset, limit]);
+  useEffect(() => {
+    load();
+    setSelected({});
+    setPreview(null);
+  }, [offset, pageSize, showAll]);
 
   const toggle = (id: number) => setSelected(prev => ({ ...prev, [id]: !prev[id] }));
 
@@ -68,7 +75,7 @@ export default function ProfessorQuestionsPage() {
       setSelected(next);
     }
   };
-  const hasNext = useMemo(() => items.length === limit, [items.length, limit]);
+  const hasNext = useMemo(() => !showAll && items.length === pageSize, [items.length, pageSize, showAll]);
 
   return (
     <ProtectedRoute allowedRoles={['professor']}>
