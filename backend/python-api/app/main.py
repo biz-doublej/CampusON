@@ -453,21 +453,25 @@ def save_questions_bulk(payload: Dict[str, Any] = Body(...), db: Session = Depen
 
 
 @app.get("/api/questions")
-def list_questions(db: Session = Depends(get_db), limit: Optional[int] = Query(None), offset: Optional[int] = Query(None)):
+def list_questions(
+    db: Session = Depends(get_db),
+    limit: Optional[int] = Query(None),
+    offset: Optional[int] = Query(None),
+):
     query = db.query(Question).order_by(Question.id.desc())
     if limit is not None:
         query = query.offset(offset or 0).limit(limit)
-    items = query.all()
+    result = query.all()
     data = [{
-        "id": x.id,
-        "number": x.question_number,
-        "content": x.content,
-        "options": x.options or {},
-        "answer": x.correct_answer,
-        "subject": x.subject,
-        "difficulty": getattr(x.difficulty, 'value', '중'),
-        "year": x.year,
-    } for x in q]
+        "id": item.id,
+        "number": item.question_number,
+        "content": item.content,
+        "options": item.options or {},
+        "answer": item.correct_answer,
+        "subject": item.subject,
+        "difficulty": getattr(item.difficulty, 'value', '중'),
+        "year": item.year,
+    } for item in result]
     return {"success": True, "items": data, "count": len(data)}
 
 
