@@ -453,8 +453,11 @@ def save_questions_bulk(payload: Dict[str, Any] = Body(...), db: Session = Depen
 
 
 @app.get("/api/questions")
-def list_questions(db: Session = Depends(get_db), limit: int = 50, offset: int = 0):
-    q = db.query(Question).order_by(Question.id.desc()).offset(offset).limit(limit).all()
+def list_questions(db: Session = Depends(get_db), limit: Optional[int] = Query(None), offset: Optional[int] = Query(None)):
+    query = db.query(Question).order_by(Question.id.desc())
+    if limit is not None:
+        query = query.offset(offset or 0).limit(limit)
+    items = query.all()
     data = [{
         "id": x.id,
         "number": x.question_number,

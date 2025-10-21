@@ -7,8 +7,11 @@ export const questionService = {
     const res = await axios.post(`${PARSER_API_URL}/api/questions/bulk`, { questions });
     return res.data;
   },
-  list: async (limit = 50, offset = 0) => {
-    const res = await axios.get(`${PARSER_API_URL}/api/questions`, { params: { limit, offset } });
+  list: async (limit?: number, offset?: number) => {
+    const params: Record<string, number> = {};
+    if (typeof limit === 'number') params.limit = limit;
+    if (typeof offset === 'number') params.offset = offset;
+    const res = await axios.get(`${PARSER_API_URL}/api/questions`, { params });
     return res.data;
   },
   deleteOne: async (id: number) => {
