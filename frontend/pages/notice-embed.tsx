@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Head from 'next/head';
 
 export default function NoticeEmbedPage() {
-  const [url, setUrl] = useState('');
-  const [target, setTarget] = useState<string | null>(null);
-  const load = () => setTarget(url);
+  const DEFAULT_URL = 'https://www.kbu.ac.kr/kor/CMS/Board/Board.do?mCode=MN069';
+  const [url, setUrl] = useState(DEFAULT_URL);
+  const [target, setTarget] = useState<string>(DEFAULT_URL);
+
+  useEffect(() => {
+    setTarget(url.trim() || DEFAULT_URL);
+  }, [url, DEFAULT_URL]);
 
   return (
     <>
@@ -16,10 +20,13 @@ export default function NoticeEmbedPage() {
         <div className="max-w-5xl mx-auto px-4">
           <h1 className="text-2xl font-bold mb-4">학교 공지 사이트 임베드</h1>
           <div className="flex gap-2 mb-4">
-            <input value={url} onChange={e=>setUrl(e.target.value)} className="flex-1 border p-2 rounded" placeholder="https://www.kbu.ac.kr/kor/CMS/Board/Board.do?mCode=MN069" />
-            <button onClick={load} className="px-4 py-2 bg-blue-600 text-white rounded">불러오기</button>
+            <input
+              value={url}
+              onChange={e => setUrl(e.target.value)}
+              className="flex-1 border p-2 rounded"
+              placeholder="https://www.kbu.ac.kr/kor/CMS/Board/Board.do?mCode=MN069"
+            />
           </div>
-          {!target && <div className="text-gray-600">학교 공지 URL을 입력하고 불러오기를 누르세요. API가 없으면 iframe으로 표시합니다.</div>}
           {target && (
             <div className="border rounded overflow-hidden" style={{height:'70vh'}}>
               <iframe src={target} className="w-full h-full" title="학교 공지" />
@@ -30,4 +37,3 @@ export default function NoticeEmbedPage() {
     </>
   );
 }
-

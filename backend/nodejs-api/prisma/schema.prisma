@@ -59,12 +59,14 @@ model Assignment {
 model Question {
   id String @id @default(cuid())
   assignment_id String
+  number Int?
   title String
   content String
+  description Json?
   options Json? // Array of options for multiple choice
   correct_answer String?
   explanation String?
-  category String
+  category String @default("general")
   difficulty Int @default(1)
   created_at DateTime @default(now())
 
