@@ -18,30 +18,46 @@ export default function useChatBot(options: UseChatBotOptions = {}) {
   const [loading, setLoading] = useState(false);
 
   const send = async (text: string) => {
-    if (!text.trim()) return;
-    const userMsg: ChatMessage = { role: 'user', content: text };
-    setMessages(prev => [...prev, userMsg]);
+    const cleaned = text.trim();
+    if (!cleaned) return;
+    const userMsg: ChatMessage = { role: 'user', content: cleaned };
+    const history = [...messages, userMsg];
+    setMessages(history);
     setLoading(true);
     try {
-      // 1) Try Gemini via Node API (with web grounding)
+      // 1) Hybrid AI via Node API (deep-learning answer + Gemini general knowledge)
       try {
-        const r = await api.post('/api/ai/chat', { prompt: text, web: true });
-        if ((r.data?.success) && r.data?.answer) {
-          setMessages(prev => [...prev, { role: 'assistant', content: r.data.answer }]);
-          return;
-        }
-      } catch {}
+        const response = await api.post('/api/ai/chat', {
+          prompt: cleaned,
+          messages: history,
+          botType,
+          department,
+          course,
+          topK,
+          web: true,
+        });
 
-      // 2) Department-specific bot (Python API)
+        if (response.data?.success) {
+          const finalAnswer = response.data?.answer || response.data?.deepAnswer || response.data?.geminiAnswer;
+          if (finalAnswer) {
+            setMessages(prev => [...prev, { role: 'assistant', content: finalAnswer }]);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('Hybrid chat failed, fallback to direct services.', err);
+      }
+
+      // 2) Department-specific bot (Python API) fallback
       if (botType === 'department') {
-        const res = await departmentService.query(text, { department: department || '', course, top_k: topK });
+        const res = await departmentService.query(cleaned, { department: department || '', course, top_k: topK });
         const answer = res?.answer || '답변을 생성하지 못했습니다.';
         setMessages(prev => [...prev, { role: 'assistant', content: answer }]);
         return;
       }
 
-      // 3) Fallback to school info bot (Python API)
-      const res = await schoolService.query(text, { top_k: topK });
+      // 3) School info bot fallback
+      const res = await schoolService.query(cleaned, { top_k: topK });
       const answer = res?.answer || '답변을 생성하지 못했습니다.';
       setMessages(prev => [...prev, { role: 'assistant', content: answer }]);
       return;
@@ -49,8 +65,8 @@ export default function useChatBot(options: UseChatBotOptions = {}) {
       // Final safety fallback
       try {
         const res = botType === 'department'
-          ? await departmentService.query(text, { department: department || '', course, top_k: topK })
-          : await schoolService.query(text, { top_k: topK });
+          ? await departmentService.query(cleaned, { department: department || '', course, top_k: topK })
+          : await schoolService.query(cleaned, { top_k: topK });
         const answer = res?.answer || '답변을 생성하지 못했습니다.';
         setMessages(prev => [...prev, { role: 'assistant', content: answer }]);
       } catch {
@@ -63,4 +79,3 @@ export default function useChatBot(options: UseChatBotOptions = {}) {
 
   return { messages, loading, send, setMessages };
 }
-
