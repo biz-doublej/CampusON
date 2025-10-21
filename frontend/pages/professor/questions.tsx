@@ -82,13 +82,35 @@ export default function ProfessorQuestionsPage() {
       <Head><title>문항 관리 - 교수</title></Head>
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-6xl mx-auto px-4">
-            <div className="flex items-center justify-between mb-4">
-              <h1 className="text-2xl font-bold">문항 관리</h1>
-            <div className="flex gap-2 items-center">
-              <label className="flex items-center gap-2 mr-2 text-sm text-gray-700">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+            <h1 className="text-2xl font-bold">문항 관리</h1>
+            <div className="flex flex-wrap gap-2 items-center">
+              <label className="flex items-center gap-2 text-sm text-gray-700">
                 <input type="checkbox" checked={allSelected} onChange={toggleSelectAll} /> 전체 선택
               </label>
-              <span className="text-sm text-gray-500 mr-2">선택: {selectedCount}</span>
+              <span className="text-sm text-gray-500">선택: {selectedCount}</span>
+              <div className="flex items-center gap-2 text-sm text-gray-600 border rounded px-2 py-1 bg-white">
+                <span>표시:</span>
+                {PAGE_PRESETS.map((size) => (
+                  <button
+                    key={size}
+                    onClick={() => { setShowAll(false); setPageSize(size); setOffset(0); }}
+                    className={`px-2 py-1 rounded ${
+                      !showAll && pageSize === size ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'
+                    }`}
+                  >
+                    {size}
+                  </button>
+                ))}
+                <button
+                  onClick={() => { setShowAll(true); setOffset(0); }}
+                  className={`px-2 py-1 rounded ${
+                    showAll ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'
+                  }`}
+                >
+                  전체
+                </button>
+              </div>
               <button onClick={load} className="px-3 py-2 bg-gray-100 border rounded">새로고침</button>
               <button onClick={() => router.push('/professor/generate')} className="px-3 py-2 bg-indigo-600 text-white rounded">AI 문제 생성</button>
               <button onClick={createQuiz} className="px-3 py-2 bg-blue-600 text-white rounded">선택 퀴즈</button>
@@ -124,19 +146,21 @@ export default function ProfessorQuestionsPage() {
           </div>
 
           {/* Pagination Controls */}
-          <div className="flex justify-end items-center gap-2 mt-4">
-            <span className="text-sm text-gray-500">페이지 {Math.floor(offset / limit) + 1}</span>
-            <button
-              onClick={() => setOffset(Math.max(0, offset - limit))}
-              disabled={offset === 0 || loading}
-              className="px-3 py-2 border rounded bg-white disabled:opacity-50"
-            >이전</button>
-            <button
-              onClick={() => setOffset(offset + limit)}
-              disabled={!hasNext || loading}
-              className="px-3 py-2 border rounded bg-white disabled:opacity-50"
-            >다음</button>
-          </div>
+          {!showAll && (
+            <div className="flex justify-end items-center gap-2 mt-4">
+              <span className="text-sm text-gray-500">페이지 {Math.floor(offset / pageSize) + 1}</span>
+              <button
+                onClick={() => setOffset(Math.max(0, offset - pageSize))}
+                disabled={offset === 0 || loading}
+                className="px-3 py-2 border rounded bg-white disabled:opacity-50"
+              >이전</button>
+              <button
+                onClick={() => setOffset(offset + pageSize)}
+                disabled={!hasNext || loading}
+                className="px-3 py-2 border rounded bg-white disabled:opacity-50"
+              >다음</button>
+            </div>
+          )}
 
           {preview && (
             <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4">

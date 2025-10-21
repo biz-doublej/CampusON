@@ -153,18 +153,26 @@ const ParsedResultViewer: React.FC<ParsedResultViewerProps> = ({ result, onUpdat
                 </div>
                 
                 {/* 박스 내용 (추가설명/조건/지문) 표시 */}
-                {currentQuestion.description && currentQuestion.description.length > 0 && (
+                {(() => {
+                  const descArr = Array.isArray(currentQuestion.description)
+                    ? currentQuestion.description
+                    : currentQuestion.description
+                      ? [currentQuestion.description]
+                      : [];
+                  if (descArr.length === 0) return null;
+                  return (
                   <div className="bg-blue-50 rounded-lg p-4 mb-4 border border-blue-200">
                     <h4 className="text-sm font-medium text-blue-700 mb-3">추가설명</h4>
                     <div className="space-y-1">
-                      {currentQuestion.description.map((desc, index) => (
+                      {descArr.map((desc, index) => (
                         <p key={index} className="text-blue-900 leading-relaxed text-sm">
                           {desc}
                         </p>
                       ))}
                     </div>
                   </div>
-                )}
+                  );
+                })()}
                 
                 <div className="space-y-3">
                   <h4 className="text-sm font-medium text-gray-700">선택지</h4>

@@ -5,7 +5,7 @@ import { ApiResponse } from '../types';
 export interface ParsedQuestion {
   number: number;
   content: string;
-  description?: string[]; // 박스 형태의 추가설명/조건/지문
+  description?: string[] | string;
   options: Record<string, string>;
   answer?: string;
   explanation?: string;
