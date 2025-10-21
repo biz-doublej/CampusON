@@ -36,10 +36,13 @@ router.post('/import', authenticateToken, async (req: Request, res: Response) =>
     const description =
       asString(metadata?.description, '') ||
       `PDF 파서 업로드 결과 - ${subject}${metadata?.year ? ` (${metadata.year}년)` : ''}`;
-    const dueDate =
+    let dueDate =
       metadata?.due_date && typeof metadata?.due_date === 'string'
         ? new Date(metadata.due_date)
         : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    if (Number.isNaN(dueDate.getTime())) {
+      dueDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    }
 
     const assignment = await prisma.assignment.create({
       data: {

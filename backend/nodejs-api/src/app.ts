@@ -11,6 +11,7 @@ import adminRoutes from './admin/routes';
 import aiRoutes from './ai/routes';
 import professorRoutes from './professor/routes';
 import studentsRoutes from './students/routes';
+import parserRoutes from './parser/routes';
 
 const app = express();
 
@@ -95,6 +96,7 @@ app.use('/api/assignments', assignmentsRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/professor', professorRoutes);
+app.use('/api/parser', parserRoutes);
 // Students Routes
 app.use('/api/students', studentsRoutes);
 

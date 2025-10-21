@@ -6,6 +6,7 @@ import ParsedResultViewer from '../../src/components/ParsedResultViewer';
 import aiService from '../../src/services/aiService';
 import questionService from '../../src/services/questionService';
 import quizService from '../../src/services/quizService';
+import { parserAPI } from '../../src/services/api';
 import type { User } from '../../src/types';
 import type { ParsedResult } from '../../src/services/parserService';
 import axios from 'axios';
@@ -328,11 +329,29 @@ const ProfessorUploadPage: React.FC = () => {
                         저장 후 퀴즈 생성
                       </button>
                       <button
-                        onClick={() => {
-                          // TODO: 파싱된 결과를 데이터베이스에 저장하는 로직
-                          alert('문제 저장 기능은 추후 구현 예정입니다.');
+                        onClick={async () => {
+                          if (!parsedResult) return;
+                          try {
+                            const payload = {
+                              metadata: parsedResult.metadata,
+                              questions: parsedResult.questions || [],
+                            };
+                            const response = await parserAPI.importParsedQuestions(payload);
+                            if (response.success) {
+                              const assignmentId = response.data?.assignment?.id;
+                              alert(`문제 저장 완료 (과제 ID: ${assignmentId || '신규'})`);
+                              if (assignmentId) {
+                                router.push(`/professor/assignments/${assignmentId}`);
+                              }
+                            } else {
+                              alert(response.message || '문제 저장 중 오류가 발생했습니다.');
+                            }
+                          } catch (err) {
+                            console.error(err);
+                            alert('문제 저장 중 오류가 발생했습니다.');
+                          }
                         }}
-                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                        className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
                       >
                         문제 저장
                       </button>

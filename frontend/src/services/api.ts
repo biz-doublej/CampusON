@@ -207,6 +207,14 @@ export const professorAPI = {
   },
 };
 
+// Parser Import API
+export const parserAPI = {
+  importParsedQuestions: async (payload: { metadata?: any; questions: any[] }): Promise<ApiResponse<any>> => {
+    const response = await api.post('/api/parser/import', payload);
+    return response.data;
+  },
+};
+
 // Students API
 export const studentsAPI = {
   getMyPracticeHours: async (): Promise<ApiResponse<{ total_hours: number }>> => {
