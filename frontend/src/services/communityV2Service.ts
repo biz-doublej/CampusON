@@ -1,4 +1,5 @@
 import axios from 'axios';
+import type { ApiResponse, CommunityBoardSummary } from '../types';
 
 const API_BASE = process.env.NEXT_PUBLIC_PARSER_API_URL || 'http://127.0.0.1:8001';
 
@@ -11,11 +12,11 @@ export const communityV2Service = {
 
   // boards
   createBoard: async (user_id: string, name: string, description?: string, is_anonymous?: boolean) => {
-    const res = await axios.post(`${API_BASE}/api/community/boards`, { user_id, name, description, is_anonymous });
+    const res = await axios.post<ApiResponse<{ board: CommunityBoardSummary }>>(`${API_BASE}/api/community/boards`, { user_id, name, description, is_anonymous });
     return res.data;
   },
   listBoards: async () => {
-    const res = await axios.get(`${API_BASE}/api/community/boards`);
+    const res = await axios.get<ApiResponse<{ boards: CommunityBoardSummary[] }>>(`${API_BASE}/api/community/boards`);
     return res.data;
   },
 
@@ -109,4 +110,3 @@ export const communityV2Service = {
 };
 
 export default communityV2Service;
-

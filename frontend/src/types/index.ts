@@ -354,6 +354,12 @@ export interface AdminMonitorSnapshot {
   stats: AdminMonitorStats;
 }
 
+export interface CommunityBoardSummary {
+  id: number;
+  name: string;
+  is_anonymous?: boolean;
+}
+
 export interface ProfessorDashboardStats {
   total_students: number;
   total_assignments: number;

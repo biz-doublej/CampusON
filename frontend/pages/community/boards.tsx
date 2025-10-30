@@ -2,9 +2,10 @@ import React, { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import communityV2Service from '../../src/services/communityV2Service';
+import type { CommunityBoardSummary } from '../../src/types';
 
 export default function CommunityBoardsPage() {
-  const [boards, setBoards] = useState<any[]>([]);
+  const [boards, setBoards] = useState<CommunityBoardSummary[]>([]);
   const [name, setName] = useState('자유게시판');
   const [desc, setDesc] = useState('자유롭게 소통해요');
   const [anon, setAnon] = useState(false);
@@ -12,7 +13,11 @@ export default function CommunityBoardsPage() {
 
   const load = async () => {
     const res = await communityV2Service.listBoards();
-    setBoards(res.boards || []);
+    if (res.success && res.data?.boards) {
+      setBoards(res.data.boards);
+    } else {
+      setBoards([]);
+    }
   };
 
   useEffect(() => { load(); }, []);
@@ -38,9 +43,9 @@ export default function CommunityBoardsPage() {
           </div>
         </div>
         <div className="grid gap-3">
-          {boards.map(b => (
-            <Link key={b.id} href={`/community/board/${b.id}`} className="block bg-white p-4 border rounded hover:bg-gray-50">
-              <div className="font-semibold">{b.name} {b.is_anonymous ? '(익명)' : ''}</div>
+          {boards.map((board) => (
+            <Link key={board.id} href={`/community/board/${board.id}`} className="block bg-white p-4 border rounded hover:bg-gray-50">
+              <div className="font-semibold">{board.name} {board.is_anonymous ? '(익명)' : ''}</div>
             </Link>
           ))}
           {boards.length === 0 && <div className="text-gray-500">게시판이 없습니다.</div>}
@@ -49,4 +54,3 @@ export default function CommunityBoardsPage() {
     </>
   );
 }
-
