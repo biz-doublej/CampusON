@@ -1,7 +1,8 @@
 import os
 import json
+from datetime import datetime, timezone
 import numpy as np
-from typing import List, Tuple, Optional, Dict, Any
+from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session
 from app.models.knowledge import KnowledgeChunk
 from app.utils.embedding_utils import create_embedding
@@ -89,3 +90,48 @@ def query_index(db: Session, query: str, top_k: int = 5) -> List[Dict[str, Any]]
             continue
         results.append({"text": row.text, "meta": row.meta, "score": float(D[0][rank])})
     return results
+
+
+def get_index_status(db: Session) -> Dict[str, Any]:
+    total_chunks = db.query(KnowledgeChunk).count()
+    index_exists = os.path.exists(INDEX_PATH) and os.path.exists(IDS_PATH)
+    vector_count = 0
+    index_size = 0
+    last_built = None
+    dimension: Optional[int] = None
+
+    if index_exists:
+        try:
+            index_size = os.path.getsize(INDEX_PATH)
+        except OSError:
+            index_size = 0
+        try:
+            mtime = os.path.getmtime(INDEX_PATH)
+            last_built = datetime.fromtimestamp(mtime, tz=timezone.utc).isoformat()
+        except OSError:
+            last_built = None
+        try:
+            with open(IDS_PATH, 'r', encoding='utf-8') as f:
+                ids = json.load(f)
+                vector_count = len(ids)
+        except Exception:
+            vector_count = 0
+        if faiss is not None:
+            try:
+                import faiss as _faiss
+                index = _faiss.read_index(INDEX_PATH)
+                dimension = index.d
+            except Exception:
+                dimension = None
+
+    return {
+        "total_chunks": int(total_chunks),
+        "index_exists": index_exists,
+        "vector_count": vector_count,
+        "dimension": dimension,
+        "index_size": index_size,
+        "last_built": last_built,
+        "index_path": INDEX_PATH if index_exists else None,
+        "ids_path": IDS_PATH if index_exists else None,
+        "faiss_available": faiss is not None,
+    }

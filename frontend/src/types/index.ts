@@ -71,7 +71,7 @@ export interface RegisterRequest {
   department?: Department;
 }
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   message?: string;
@@ -247,6 +247,113 @@ export interface AdminStatsResponse {
   recent_activities: Activity[];
 }
 
+export interface UserGrowthPoint {
+  period: string;
+  count: number;
+}
+
+export interface AssignmentTrendPoint {
+  period: string;
+  submissions: number;
+  average_score: number;
+}
+
+export interface DepartmentPerformancePoint {
+  department: string;
+  average_score: number;
+  test_count: number;
+}
+
+export interface ActivityHeatmapPoint {
+  date: string;
+  count: number;
+}
+
+export interface PracticeHoursPoint {
+  department: string;
+  hours: number;
+}
+
+export interface ScoreDistributionBucket {
+  bucket: string;
+  count: number;
+}
+
+export interface RecentAssignmentStat {
+  title: string;
+  submissions: number;
+  average_score: number;
+}
+
+export interface AdminAnalyticsOverview {
+  userGrowth: UserGrowthPoint[];
+  assignmentTrend: AssignmentTrendPoint[];
+  departmentPerformance: DepartmentPerformancePoint[];
+  activityHeatmap: ActivityHeatmapPoint[];
+  practiceHours: PracticeHoursPoint[];
+  scoreDistribution: ScoreDistributionBucket[];
+  recentAssignments: RecentAssignmentStat[];
+}
+
+export interface AdminReportsSummary {
+  roleCounts: Record<string, number>;
+  deptCounts: Record<string, number>;
+  assignmentCounts: Record<string, number>;
+}
+
+export interface KnowledgeListItem {
+  id: number;
+  text_preview: string;
+  meta?: Record<string, unknown> | null;
+  created_at?: string | null;
+}
+
+export interface AdminMonitorNode {
+  uptime_sec: number;
+  version: string;
+  latency_ms: number;
+  memory_mb: number;
+  cpu_load: number;
+}
+
+export interface AdminMonitorDatabase {
+  ok: boolean;
+  latency_ms?: number | null;
+}
+
+export interface AdminMonitorPythonApi {
+  ok: boolean;
+  version?: string | null;
+  latency_ms?: number | null;
+  base: string;
+}
+
+export interface AdminMonitorWebServer {
+  ok: boolean;
+  latency_ms?: number | null;
+  url: string;
+}
+
+export interface AdminMonitorFileServer {
+  ok: boolean;
+  note?: string;
+}
+
+export interface AdminMonitorStats {
+  total_assignments: number;
+  average_score: number;
+}
+
+export interface AdminMonitorSnapshot {
+  node: AdminMonitorNode;
+  database: AdminMonitorDatabase;
+  api_server: { ok: boolean; port: string };
+  python_api: AdminMonitorPythonApi;
+  web_server: AdminMonitorWebServer;
+  file_server: AdminMonitorFileServer;
+  stats: AdminMonitorStats;
+}
+
 export interface ProfessorDashboardStats {
   total_students: number;
   total_assignments: number;
@@ -293,6 +400,45 @@ export interface Permission {
   roles: UserRole[];
 }
 
+export interface RagStatus {
+  total_chunks: number;
+  index_exists: boolean;
+  vector_count: number;
+  dimension?: number | null;
+  index_size: number;
+  last_built?: string | null;
+  index_path?: string | null;
+  ids_path?: string | null;
+  faiss_available: boolean;
+}
+
+export interface RagQueryResult {
+  text: string;
+  meta?: Record<string, unknown> | null;
+  score?: number | null;
+}
+
+export interface RagBuildResponse {
+  success: boolean;
+  error?: string;
+  count?: number;
+  index_path?: string;
+  ids_path?: string;
+  status: RagStatus;
+}
+
+export interface RagQueryResponse {
+  success: boolean;
+  results: RagQueryResult[];
+}
+
+export interface RagIngestResponse {
+  success: boolean;
+  ingested: number;
+  index_build?: RagBuildResponse | null;
+  status: RagStatus;
+}
+
 // 파일 업로드 관련 타입
 export interface UploadFile {
   id: string;
@@ -312,6 +458,17 @@ export interface SystemSettings {
   allowed_file_types: string[];
   email_notifications: boolean;
   maintenance_mode: boolean;
+}
+
+export interface AdminSystemSettings {
+  enablePdfParsing?: boolean;
+  enableGlobalChat?: boolean;
+  defaultTheme?: 'light' | 'dark' | 'auto';
+  analytics?: { enabled: boolean };
+  compactMode?: boolean;
+  animation?: boolean;
+  showSystemBanner?: boolean;
+  language?: string;
 }
 
 // 알림 타입

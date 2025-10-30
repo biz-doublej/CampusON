@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ProtectedRoute from '../../src/components/ProtectedRoute';
 import { assignmentsAPI } from '../../src/services/api';
+import type { AssignmentSummary } from '../../src/types';
 
 export default function AdminCoursesPage() {
-  const [list, setList] = useState<any[]>([]);
+  const [list, setList] = useState<AssignmentSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('');
 
@@ -11,7 +12,7 @@ export default function AdminCoursesPage() {
     try {
       setLoading(true);
       const r = await assignmentsAPI.list();
-      if (r.success) setList(r.data || []);
+      if (r.success && r.data) setList(r.data);
     } finally {
       setLoading(false);
     }
@@ -20,7 +21,10 @@ export default function AdminCoursesPage() {
   useEffect(() => { load(); }, []);
 
   const filtered = useMemo(() => {
-    return list.filter((a) => !status || String(a.status).toLowerCase() === status);
+    return list.filter((assignment) => {
+      if (!status) return true;
+      return String(assignment.status ?? '').toLowerCase() === status;
+    });
   }, [list, status]);
 
   return (
@@ -48,14 +52,18 @@ export default function AdminCoursesPage() {
               <div className="p-6">항목이 없습니다.</div>
             ) : (
               <ul className="divide-y">
-                {filtered.map((a) => (
-                  <li key={a.id} className="p-4 flex items-start justify-between">
+                {filtered.map((assignment) => (
+                  <li key={assignment.id} className="p-4 flex items-start justify-between">
                     <div>
-                      <div className="font-semibold text-gray-900">{a.title}</div>
-                      <div className="text-sm text-gray-600 mt-1">{a.description}</div>
-                      <div className="text-xs text-gray-500 mt-1">마감일: {new Date(a.due_date).toLocaleString()} · 상태: {a.status}</div>
+                      <div className="font-semibold text-gray-900">{assignment.title}</div>
+                      <div className="text-sm text-gray-600 mt-1">{assignment.description}</div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        마감일: {new Date(assignment.due_date).toLocaleString()} · 상태: {assignment.status}
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-500">생성자: {a.created_by?.substring?.(0,8)}...</div>
+                    <div className="text-xs text-gray-500">
+                      생성자: {assignment.created_by?.substring?.(0, 8) ?? '알 수 없음'}
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -66,4 +74,3 @@ export default function AdminCoursesPage() {
     </ProtectedRoute>
   );
 }
-

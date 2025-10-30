@@ -1,25 +1,27 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import ProtectedRoute from '../../src/components/ProtectedRoute';
 import { adminAPI } from '../../src/services/api';
+import type { User } from '../../src/types';
 
 export default function AdminUsersPage() {
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [role, setRole] = useState<string>('');
   const [dept, setDept] = useState<string>('');
   const [q, setQ] = useState('');
 
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
       setLoading(true);
       const res = await adminAPI.listUsers({ role: role || undefined, department: dept || undefined, q: q || undefined });
-      if (res.success) setUsers(res.data || []);
+      if (res.success && res.data) setUsers(res.data);
+      if (res.success && !res.data) setUsers([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [role, dept, q]);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [load]);
 
   return (
     <ProtectedRoute allowedRoles={['admin']}>
@@ -69,13 +71,13 @@ export default function AdminUsersPage() {
                   <tr><td className="px-3 py-4" colSpan={5}>불러오는 중...</td></tr>
                 ) : users.length === 0 ? (
                   <tr><td className="px-3 py-4" colSpan={5}>사용자가 없습니다.</td></tr>
-                ) : users.map((u) => (
-                  <tr key={u.id} className="border-t">
-                    <td className="px-3 py-2">{u.name || u.user_id}</td>
-                    <td className="px-3 py-2">{u.email}</td>
-                    <td className="px-3 py-2 text-center">{String(u.role || '').toLowerCase()}</td>
-                    <td className="px-3 py-2 text-center">{String(u.department || '').toLowerCase()}</td>
-                    <td className="px-3 py-2 text-center">{u.created_at?.substring?.(0,10) || ''}</td>
+                ) : users.map((user) => (
+                  <tr key={user.id} className="border-t">
+                    <td className="px-3 py-2">{user.name || user.user_id}</td>
+                    <td className="px-3 py-2">{user.email}</td>
+                    <td className="px-3 py-2 text-center">{user.role?.toLowerCase?.() ?? ''}</td>
+                    <td className="px-3 py-2 text-center">{user.department?.toLowerCase?.() ?? ''}</td>
+                    <td className="px-3 py-2 text-center">{user.created_at?.substring?.(0, 10) ?? ''}</td>
                   </tr>
                 ))}
               </tbody>
@@ -86,4 +88,3 @@ export default function AdminUsersPage() {
     </ProtectedRoute>
   );
 }
-

@@ -2,28 +2,29 @@ import React, { useEffect, useState } from 'react';
 import ProtectedRoute from '../../src/components/ProtectedRoute';
 import { adminAPI } from '../../src/services/api';
 import { saveRuntimeSettings } from '../../src/utils/runtimeConfig';
+import type { AdminSystemSettings } from '../../src/types';
 
 export default function AdminSystemSettingsPage() {
-  const [settings, setSettings] = useState<any>(null);
+  const [settings, setSettings] = useState<AdminSystemSettings | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     (async () => {
       try {
         const r = await adminAPI.getSettings();
-        if (r.success) setSettings(r.data);
+        if (r.success && r.data) setSettings(r.data);
       } catch {}
     })();
   }, []);
 
-  const update = async (patch: any) => {
+  const update = async (patch: Partial<AdminSystemSettings>) => {
     if (!settings) return;
     const next = { ...settings, ...patch };
     setSettings(next);
     try {
       setSaving(true);
       const r = await adminAPI.updateSettings(next);
-      if (r.success) setSettings(r.data);
+      if (r.success && r.data) setSettings(r.data);
       // persist to runtime to immediately reflect in UI
       saveRuntimeSettings(patch);
     } finally {

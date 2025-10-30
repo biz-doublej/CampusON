@@ -29,7 +29,7 @@ const AboutPage: React.FC = () => {
                 강의 요약, 시험 대비, 과제 관리부터 학사 행정까지 — <strong>캠퍼스 생활 전반을 AI가 지원</strong>합니다.
               </p>
               <div className="inline-flex items-center bg-yellow-100 text-yellow-800 px-6 py-3 rounded-lg text-lg font-semibold">
-                💡 "공부는 학생이, 지원은 CampusON이"
+                💡 &ldquo;공부는 학생이, 지원은 CampusON이&rdquo;
               </div>
           </div>
 
@@ -49,7 +49,7 @@ const AboutPage: React.FC = () => {
                 <div className="bg-white rounded-lg p-6 shadow-sm">
                   <div className="text-lg text-gray-700 leading-relaxed">
                     <blockquote className="border-l-4 border-blue-500 pl-4 mb-4 italic text-xl">
-                      "CampusON – AI로 열리는 새로운 캠퍼스"
+                      &ldquo;CampusON – AI로 열리는 새로운 캠퍼스&rdquo;
                     </blockquote>
                     <p className="mb-4">
                       CampusON은 학생·교수·대학이 함께 성장할 수 있도록 설계된 <strong className="text-blue-600">AI 기반 교육 플랫폼</strong>입니다.
@@ -58,7 +58,7 @@ const AboutPage: React.FC = () => {
                       강의 요약, 시험 대비, 과제 관리부터 학사 행정까지 — <strong className="text-blue-600">캠퍼스 생활 전반을 AI가 지원</strong>합니다.
                     </p>
                     <div className="text-center">
-                      <span className="bg-yellow-100 text-yellow-800 px-4 py-2 rounded-lg font-semibold">"공부는 학생이, 지원은 CampusON이"</span>
+                      <span className="bg-yellow-100 text-yellow-800 px-4 py-2 rounded-lg font-semibold">&ldquo;공부는 학생이, 지원은 CampusON이&rdquo;</span>
                     </div>
                   </div>
                 </div>

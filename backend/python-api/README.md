@@ -192,6 +192,9 @@ curl -X POST "http://localhost:8001/api/parse" \
 
 ### RAG (FAISS)
 
+- `GET /api/ai/rag/status` — check total chunks, FAISS availability, latest index metadata
+- `POST /api/ai/rag/ingest` — ingest arbitrary documents  
+  - body: `{ documents: [{ text: string, meta?: Record<string, any> }], chunk_size?: number, chunk_overlap?: number, default_meta?: object, build_index?: boolean }`
 - `POST /api/ai/rag/build` — build FAISS index from `knowledge_chunks` (requires embeddings)
 - `POST /api/ai/rag/query` — query similar chunks `{ query: string, top_k?: number }`
 

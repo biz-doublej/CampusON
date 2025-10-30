@@ -17,8 +17,17 @@ import {
   AssignmentSummary,
   CreateAssignmentPayload,
   AdminStatsResponse,
+  RagStatus,
+  RagQueryResponse,
+  RagIngestResponse,
+  RagBuildResponse,
+  AdminAnalyticsOverview,
+  AdminMonitorSnapshot,
+  AdminReportsSummary,
+  AdminSystemSettings,
 } from '../types';
 import { getApiUrl } from '../utils/config';
+import type { ParsedQuestion, ParsedResult } from './parserService';
 
 // Dynamic API base URL from configuration
 const API_BASE_URL = getApiUrl();
@@ -177,15 +186,15 @@ export const adminAPI = {
     const response = await api.get('/api/admin/stats');
     return response.data;
   },
-  getMonitor: async (): Promise<ApiResponse<Record<string, unknown>>> => {
+  getMonitor: async (): Promise<ApiResponse<AdminMonitorSnapshot>> => {
     const response = await api.get('/api/admin/monitor');
     return response.data;
   },
-  getSettings: async (): Promise<ApiResponse<Record<string, unknown>>> => {
+  getSettings: async (): Promise<ApiResponse<AdminSystemSettings>> => {
     const response = await api.get('/api/admin/settings');
     return response.data;
   },
-  updateSettings: async (payload: Record<string, unknown>): Promise<ApiResponse<Record<string, unknown>>> => {
+  updateSettings: async (payload: Partial<AdminSystemSettings>): Promise<ApiResponse<AdminSystemSettings>> => {
     const response = await api.put('/api/admin/settings', payload);
     return response.data;
   },
@@ -193,8 +202,47 @@ export const adminAPI = {
     const response = await api.get('/api/admin/users', { params });
     return response.data;
   },
-  getReports: async (): Promise<ApiResponse<Record<string, unknown>>> => {
+  getReports: async (): Promise<ApiResponse<AdminReportsSummary>> => {
     const response = await api.get('/api/admin/reports');
+    return response.data;
+  },
+  getAnalyticsOverview: async (): Promise<ApiResponse<AdminAnalyticsOverview>> => {
+    const response = await api.get('/api/admin/analytics/overview');
+    return response.data;
+  },
+};
+
+// RAG Management API
+export const ragAPI = {
+  getStatus: async (): Promise<{ success: boolean; status: RagStatus }> => {
+    const response = await api.get('/api/ai/rag/status');
+    return response.data;
+  },
+  buildIndex: async (): Promise<RagBuildResponse> => {
+    const response = await api.post('/api/ai/rag/build');
+    return response.data;
+  },
+  query: async (query: string, topK = 5): Promise<RagQueryResponse> => {
+    const response = await api.post('/api/ai/rag/query', { query, top_k: topK });
+    return response.data;
+  },
+  ingestDocuments: async (
+    documents: { text: string; meta?: Record<string, unknown> }[],
+    options?: {
+      chunkSize?: number;
+      chunkOverlap?: number;
+      defaultMeta?: Record<string, unknown>;
+      buildIndex?: boolean;
+    }
+  ): Promise<RagIngestResponse> => {
+    const payload = {
+      documents,
+      chunk_size: options?.chunkSize ?? 800,
+      chunk_overlap: options?.chunkOverlap ?? 120,
+      default_meta: options?.defaultMeta,
+      build_index: options?.buildIndex ?? false,
+    };
+    const response = await api.post('/api/ai/rag/ingest', payload);
     return response.data;
   },
 };
@@ -209,7 +257,12 @@ export const professorAPI = {
 
 // Parser Import API
 export const parserAPI = {
-  importParsedQuestions: async (payload: { metadata?: any; questions: any[] }): Promise<ApiResponse<any>> => {
+  importParsedQuestions: async (
+    payload: {
+      metadata?: ParsedResult['metadata'];
+      questions: ParsedQuestion[];
+    }
+  ): Promise<ApiResponse<{ saved_question_ids?: number[] }>> => {
     const response = await api.post('/api/parser/import', payload);
     return response.data;
   },

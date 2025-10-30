@@ -19,6 +19,7 @@ const Navigation: React.FC<NavigationProps> = ({ role, currentPath }) => {
           { name: '대시보드', href: '/admin', current: currentPath === '/admin' },
           { name: '사용자 관리', href: '/admin/users', current: currentPath === '/admin/users' },
           { name: '시스템 설정', href: '/admin/system', current: currentPath === '/admin/system' },
+          { name: 'RAG 관리', href: '/admin/rag', current: currentPath === '/admin/rag' },
           { name: '통계 리포트', href: '/admin/reports', current: currentPath === '/admin/reports' },
         ];
       case 'professor':

@@ -2,61 +2,60 @@ import React, { useEffect, useMemo, useState } from 'react';
 import ProtectedRoute from '../../src/components/ProtectedRoute';
 import { adminAPI } from '../../src/services/api';
 import kbService from '../../src/services/kbService';
-
-type Monitor = {
-  node: { uptime_sec: number; version: string; latency_ms: number; memory_mb: number; cpu_load: number };
-  database: { ok: boolean; latency_ms?: number | null };
-  api_server: { ok: boolean; port: string };
-  python_api: { ok: boolean; version?: string | null; latency_ms?: number | null; base: string };
-  web_server: { ok: boolean; latency_ms?: number | null; url: string };
-  file_server: { ok: boolean; note?: string };
-};
+import type { AdminMonitorSnapshot, KnowledgeListItem } from '../../src/types';
 
 export default function AdminMonitoringPage() {
-  const [mon, setMon] = useState<Monitor | null>(null);
-  const [kb, setKb] = useState<any[]>([]);
+  const [snapshot, setSnapshot] = useState<AdminMonitorSnapshot | null>(null);
+  const [kb, setKb] = useState<KnowledgeListItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    (async () => {
+    let cancelled = false;
+    const load = async () => {
       try {
-        const r = await fetch('/api/admin/monitor', { headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || ''}` } });
-        const j = await r.json();
-        if (j?.success) setMon(j.data);
+        setLoading(true);
+        const [monitorRes, kbRes] = await Promise.all([adminAPI.getMonitor(), kbService.list(50)]);
+        if (!cancelled) {
+          if (monitorRes.success && monitorRes.data) setSnapshot(monitorRes.data);
+          if (kbRes.success && kbRes.data) setKb(kbRes.data);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
-      try {
-        const k = await kbService.list(50);
-        if (k?.success) setKb(k.data || []);
-      } catch {}
-    })();
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const uptime = useMemo(() => {
-    if (!mon?.node?.uptime_sec) return '—';
-    const s = Math.floor(mon.node.uptime_sec);
+    if (!snapshot?.node?.uptime_sec) return '—';
+    const s = Math.floor(snapshot.node.uptime_sec);
     const h = Math.floor(s / 3600); const m = Math.floor((s % 3600) / 60);
     return `${h}h ${m}m`;
-  }, [mon]);
+  }, [snapshot]);
 
   return (
     <ProtectedRoute allowedRoles={['admin']}>
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-7xl mx-auto px-4">
-          <h1 className="text-2xl font-bold mb-6">시스템 모니터링</h1>
+          <h1 className="text-2xl font-bold mb-2">시스템 모니터링</h1>
+          {loading && <p className="mb-4 text-sm text-gray-500">최신 상태를 불러오는 중입니다...</p>}
 
           {/* Uptime and status cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-            <StatusCard title="웹 서버" ok={!!mon?.web_server?.ok} extra={`${mon?.web_server?.latency_ms ?? '—'} ms`} />
-            <StatusCard title="Node API" ok={true} extra={`${mon?.node?.latency_ms ?? '—'} ms`} />
-            <StatusCard title="Python AI API" ok={!!mon?.python_api?.ok} extra={`${mon?.python_api?.latency_ms ?? '—'} ms`} />
-            <StatusCard title="데이터베이스" ok={!!mon?.database?.ok} extra={`${mon?.database?.latency_ms ?? '—'} ms`} />
-            <StatusCard title="파일 서버" ok={!!mon?.file_server?.ok} extra={mon?.file_server?.note || ''} />
+            <StatusCard title="웹 서버" ok={!!snapshot?.web_server?.ok} extra={`${snapshot?.web_server?.latency_ms ?? '—'} ms`} />
+            <StatusCard title="Node API" ok={!!snapshot?.api_server?.ok} extra={`${snapshot?.node?.latency_ms ?? '—'} ms`} />
+            <StatusCard title="Python AI API" ok={!!snapshot?.python_api?.ok} extra={`${snapshot?.python_api?.latency_ms ?? '—'} ms`} />
+            <StatusCard title="데이터베이스" ok={!!snapshot?.database?.ok} extra={`${snapshot?.database?.latency_ms ?? '—'} ms`} />
+            <StatusCard title="파일 서버" ok={!!snapshot?.file_server?.ok} extra={snapshot?.file_server?.note || ''} />
             <div className="bg-white rounded border p-4">
               <div className="text-sm text-gray-500">Node Uptime</div>
               <div className="text-2xl font-semibold">{uptime}</div>
-              <div className="mt-2 text-xs text-gray-500">v{process?.versions?.node} · RSS {mon?.node?.memory_mb}MB · Load {mon?.node?.cpu_load?.toFixed?.(2)}</div>
+              <div className="mt-2 text-xs text-gray-500">
+                v{process?.versions?.node} · RSS {snapshot?.node?.memory_mb ?? '—'}MB · Load {snapshot?.node?.cpu_load?.toFixed?.(2)}
+              </div>
             </div>
           </div>
 
@@ -67,9 +66,9 @@ export default function AdminMonitoringPage() {
               <span className="text-sm text-gray-500">지식베이스 최근 항목 {kb.length}개</span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <BarStat label="과제 수" value={Number((mon as any)?.stats?.total_assignments || 0)} max={100} color="bg-blue-500" />
+              <BarStat label="과제 수" value={Number(snapshot?.stats?.total_assignments ?? 0)} max={100} color="bg-blue-500" />
               <BarStat label="지식 항목(최근)" value={kb.length} max={50} color="bg-green-500" />
-              <BarStat label="평균 점수(%)" value={Math.round(Number((mon as any)?.stats?.average_score || 0))} max={100} color="bg-purple-500" />
+              <BarStat label="평균 점수(%)" value={Math.round(Number(snapshot?.stats?.average_score ?? 0))} max={100} color="bg-purple-500" />
             </div>
           </div>
 
@@ -80,11 +79,17 @@ export default function AdminMonitoringPage() {
               <div className="text-gray-600">표시할 항목이 없습니다.</div>
             ) : (
               <ul className="divide-y">
-                {kb.map((it: any) => (
-                  <li key={it.id} className="py-3">
-                    <div className="text-sm text-gray-500">#{it.id} · {it.created_at?.replace('T',' ').replace('Z','')}</div>
-                    <div className="text-gray-900">{it.text_preview}</div>
-                    {it.meta?.url && <a className="text-blue-600 text-sm underline" href={it.meta.url} target="_blank" rel="noreferrer">원문 링크</a>}
+                {kb.map((item) => (
+                  <li key={item.id} className="py-3">
+                    <div className="text-sm text-gray-500">
+                      #{item.id} · {item.created_at?.replace?.('T', ' ').replace?.('Z', '')}
+                    </div>
+                    <div className="text-gray-900">{item.text_preview}</div>
+                    {item.meta && typeof item.meta === 'object' && 'url' in item.meta && typeof item.meta.url === 'string' && (
+                      <a className="text-blue-600 text-sm underline" href={item.meta.url} target="_blank" rel="noreferrer">
+                        원문 링크
+                      </a>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -122,4 +127,3 @@ function BarStat({ label, value, max, color }: { label: string; value: number; m
     </div>
   );
 }
-

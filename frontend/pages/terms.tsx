@@ -28,7 +28,7 @@ const TermsPage: React.FC = () => {
               <section className="mb-8">
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">제1조 (목적)</h2>
                 <p className="text-gray-700 leading-relaxed mb-4">
-                  이 약관은 DoubleJ(이하 "회사")가 제공하는 CampusON 서비스(이하 "서비스")의 
+                  이 약관은 DoubleJ(이하 &ldquo;회사&rdquo;)가 제공하는 CampusON 서비스(이하 &ldquo;서비스&rdquo;)의 
                   이용조건 및 절차, 회사와 이용자 간의 권리, 의무, 책임사항 및 기타 필요한 
                   사항을 규정함을 목적으로 합니다.
                 </p>
@@ -40,10 +40,10 @@ const TermsPage: React.FC = () => {
                 <div className="text-gray-700 leading-relaxed">
                   <p className="mb-2">이 약관에서 사용하는 용어의 정의는 다음과 같습니다:</p>
                   <ol className="list-decimal list-inside space-y-2 ml-4">
-                    <li>"서비스"라 함은 회사가 제공하는 CampusON 교육 플랫폼을 의미합니다.</li>
-                    <li>"이용자"라 함은 본 약관에 따라 회사가 제공하는 서비스를 받는 경복대학교 구성원을 말합니다.</li>
-                    <li>"계정"이라 함은 서비스 이용을 위해 이용자가 등록한 고유한 식별정보를 의미합니다.</li>
-                    <li>"콘텐츠"라 함은 서비스에서 제공되는 모든 정보, 데이터, 텍스트, 이미지 등을 의미합니다.</li>
+                    <li>&ldquo;서비스&rdquo;라 함은 회사가 제공하는 CampusON 교육 플랫폼을 의미합니다.</li>
+                    <li>&ldquo;이용자&rdquo;라 함은 본 약관에 따라 회사가 제공하는 서비스를 받는 경복대학교 구성원을 말합니다.</li>
+                    <li>&ldquo;계정&rdquo;이라 함은 서비스 이용을 위해 이용자가 등록한 고유한 식별정보를 의미합니다.</li>
+                    <li>&ldquo;콘텐츠&rdquo;라 함은 서비스에서 제공되는 모든 정보, 데이터, 텍스트, 이미지 등을 의미합니다.</li>
                   </ol>
                 </div>
               </section>

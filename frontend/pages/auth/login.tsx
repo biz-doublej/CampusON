@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
+import { isAxiosError } from 'axios';
 import { authAPI } from '../../src/services/api';
 import { DynamicDashboardRouter } from '../../src/utils/dashboardRouter';
 import useResponsive from '../../src/hooks/useResponsive';
@@ -111,14 +112,18 @@ const Login: React.FC = () => {
       } else {
         setErrors({ general: response.message || '로그인에 실패했습니다.' });
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('로그인 오류:', error);
-      if (error.response?.status === 401) {
-        setErrors({ general: '이메일 또는 비밀번호가 올바르지 않습니다.' });
-      } else if (error.response?.data?.detail) {
-        setErrors({ general: error.response.data.detail });
+      if (isAxiosError<{ detail?: string }>(error)) {
+        if (error.response?.status === 401) {
+          setErrors({ general: '이메일 또는 비밀번호가 올바르지 않습니다.' });
+        } else if (error.response?.data?.detail) {
+          setErrors({ general: error.response.data.detail });
+        } else {
+          setErrors({ general: '로그인 중 오류가 발생했습니다.' });
+        }
       } else {
-        setErrors({ general: '로그인 중 오류가 발생했습니다.' });
+        setErrors({ general: '이메일 또는 비밀번호가 올바르지 않습니다.' });
       }
     } finally {
       setLoading(false);

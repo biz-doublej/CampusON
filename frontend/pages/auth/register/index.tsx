@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
+import { isAxiosError } from 'axios';
 import { authAPI } from '../../../src/services/api';
 import { DEPARTMENT_OPTIONS } from '../../../src/config/departments';
 import { DynamicDashboardRouter } from '../../../src/utils/dashboardRouter';
@@ -150,12 +151,16 @@ const Register: React.FC = () => {
         setErrors({ general: response.message || '회원가입에 실패했습니다.' });
       }
       
-    } catch (error: any) {
+    } catch (error) {
       console.error('회원가입 오류:', error);
-      if (error.response?.status === 409) {
-        setErrors({ general: error.response.data.message || '이미 등록된 이메일 또는 학번입니다.' });
-      } else if (error.response?.data?.message) {
-        setErrors({ general: error.response.data.message });
+      if (isAxiosError<{ message?: string }>(error)) {
+        if (error.response?.status === 409) {
+          setErrors({ general: error.response.data?.message || '이미 등록된 이메일 또는 학번입니다.' });
+        } else if (error.response?.data?.message) {
+          setErrors({ general: error.response.data.message });
+        } else {
+          setErrors({ general: '회원가입 중 오류가 발생했습니다.' });
+        }
       } else {
         setErrors({ general: '회원가입 중 오류가 발생했습니다.' });
       }

@@ -9,7 +9,7 @@ from app.db.database import Base, engine, get_db
 from app.parsers.question_parser import question_parser
 from app.core.config import settings
 
-from app.ai.knowledge import ingest_questions_as_knowledge
+from app.ai.knowledge import ingest_questions_as_knowledge, ingest_documents_as_knowledge
 from app.ai.generation import generate_questions
 from app.ai.chat import chat_with_ai
 from app.models.quiz import Quiz, QuizQuestion, QuizSubmission
@@ -256,10 +256,19 @@ def ai_generate_questions(payload: Dict[str, Any] = Body(...), db: Session = Dep
 
 
 # ---------- RAG (FAISS) ----------
+@app.get("/api/ai/rag/status")
+def rag_status(db: Session = Depends(get_db)):
+    status = rag_ai.get_index_status(db)
+    return {"success": True, "status": status}
+
+
 @app.post("/api/ai/rag/build")
 def rag_build(db: Session = Depends(get_db)):
     res = rag_ai.build_index(db)
-    return res
+    status = rag_ai.get_index_status(db)
+    response = dict(res)
+    response["status"] = status
+    return response
 
 
 @app.post("/api/ai/rag/query")
@@ -268,6 +277,45 @@ def rag_query(payload: Dict[str, Any] = Body(...), db: Session = Depends(get_db)
     top_k = int(payload.get("top_k", 5))
     results = rag_ai.query_index(db, query, top_k)
     return {"success": True, "results": results}
+
+
+@app.post("/api/ai/rag/ingest")
+def rag_ingest(payload: Dict[str, Any] = Body(...), db: Session = Depends(get_db)):
+    documents = payload.get("documents", [])
+    if not isinstance(documents, list) or not documents:
+        raise HTTPException(status_code=400, detail="documents 배열이 필요합니다.")
+    chunk_size = int(payload.get("chunk_size", 800))
+    chunk_overlap = int(payload.get("chunk_overlap", 120))
+    default_meta = payload.get("default_meta")
+    auto_build = bool(payload.get("build_index", False))
+
+    try:
+        saved = ingest_documents_as_knowledge(
+            db,
+            documents,
+            default_meta=default_meta if isinstance(default_meta, dict) else None,
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
+        )
+        db.commit()
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"RAG document ingest failed: {e}")
+        raise HTTPException(status_code=500, detail="RAG 문서 인덱싱 중 오류가 발생했습니다.")
+
+    build_result: Optional[Dict[str, Any]] = None
+    if auto_build:
+        build_result = rag_ai.build_index(db)
+
+    status = rag_ai.get_index_status(db)
+    return {
+        "success": True,
+        "ingested": saved,
+        "index_build": build_result,
+        "status": status,
+    }
 
 
 # ---------- Community AI Chat ----------
