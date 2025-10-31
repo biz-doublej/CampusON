@@ -103,3 +103,7 @@ def ingest_documents_as_knowledge(
             db.add(chunk)
             saved += 1
     return saved
+
+
+def chunk_plain_text(text: str, *, chunk_size: int = 800, chunk_overlap: int = 120) -> List[str]:
+    return _chunk_text(text, max_len=chunk_size, overlap=chunk_overlap)

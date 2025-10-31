@@ -186,3 +186,24 @@ def test_rag_build_and_query_with_index(client):
     results = query_resp.json()["results"]
     assert results
     assert "감염관리" in results[0]["text"]
+
+
+def test_rag_upload_text_file(client):
+    content = "물리치료 평가 체크리스트".encode("utf-8")
+    files = {"file": ("notes.txt", content, "text/plain")}
+    resp = client.post(
+        "/api/ai/rag/upload",
+        data={
+            "department": "physical_therapy",
+            "course": "임상실습",
+            "chunk_size": "400",
+            "chunk_overlap": "80",
+            "build_index": "false",
+        },
+        files=files,
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["success"] is True
+    assert body["ingested"] >= 1
+    assert body["status"]["total_chunks"] >= 1

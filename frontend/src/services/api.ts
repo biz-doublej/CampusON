@@ -20,6 +20,7 @@ import {
   RagStatus,
   RagQueryResponse,
   RagIngestResponse,
+  RagUploadResponse,
   RagBuildResponse,
   AdminAnalyticsOverview,
   AdminMonitorSnapshot,
@@ -252,6 +253,28 @@ export const ragAPI = {
       build_index: options?.buildIndex ?? false,
     };
     const response = await ragClient.post('/api/ai/rag/ingest', payload);
+    return response.data;
+  },
+  uploadDocument: async (
+    file: File,
+    options?: {
+      department?: string;
+      course?: string;
+      chunkSize?: number;
+      chunkOverlap?: number;
+      buildIndex?: boolean;
+    }
+  ): Promise<RagUploadResponse> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (options?.department) formData.append('department', options.department);
+    if (options?.course) formData.append('course', options.course);
+    if (options?.chunkSize != null) formData.append('chunk_size', String(options.chunkSize));
+    if (options?.chunkOverlap != null) formData.append('chunk_overlap', String(options.chunkOverlap));
+    formData.append('build_index', String(options?.buildIndex ?? false));
+    const response = await ragClient.post('/api/ai/rag/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return response.data;
   },
 };

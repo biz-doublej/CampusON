@@ -34,6 +34,13 @@ const AdminRagPage = () => {
   const [ingestMessage, setIngestMessage] = useState<string | null>(null);
   const [ingestError, setIngestError] = useState<string | null>(null);
   const [ingestLoading, setIngestLoading] = useState<boolean>(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadDepartment, setUploadDepartment] = useState<string>('');
+  const [uploadCourse, setUploadCourse] = useState<string>('');
+  const [uploadAutoBuild, setUploadAutoBuild] = useState<boolean>(false);
+  const [uploadMessage, setUploadMessage] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadLoading, setUploadLoading] = useState<boolean>(false);
 
   const refreshStatus = async () => {
     try {
@@ -49,6 +56,37 @@ const AdminRagPage = () => {
       setStatusError('RAG 상태 조회 중 오류가 발생했습니다.');
     } finally {
       setLoadingStatus(false);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!uploadFile) {
+      setUploadError('업로드할 파일을 선택하세요.');
+      return;
+    }
+    try {
+      setUploadLoading(true);
+      setUploadError(null);
+      setUploadMessage(null);
+      const res = await ragAPI.uploadDocument(uploadFile, {
+        department: uploadDepartment || undefined,
+        course: uploadCourse || undefined,
+        chunkSize,
+        chunkOverlap,
+        buildIndex: uploadAutoBuild,
+      });
+      if (res.success) {
+        setUploadMessage(`총 ${res.ingested}개의 청크가 추가되었습니다.`);
+        setStatus(res.status);
+        setUploadFile(null);
+        await refreshStatus();
+      } else {
+        setUploadError('파일 업로드에 실패했습니다.');
+      }
+    } catch (err) {
+      setUploadError('파일 업로드 중 오류가 발생했습니다.');
+    } finally {
+      setUploadLoading(false);
     }
   };
 
@@ -199,6 +237,63 @@ const AdminRagPage = () => {
                 </div>
               ))}
             </div>
+          </section>
+
+          <section className="bg-slate-800/60 border border-slate-700 rounded-xl p-6 shadow-lg space-y-4">
+            <h2 className="text-xl font-semibold">파일 업로드 인덱싱</h2>
+            <p className="text-sm text-slate-300">
+              PDF 또는 텍스트 파일을 업로드해 지식베이스에 추가합니다. Chunk 설정은 아래 텍스트 인덱싱과 동일하게 적용됩니다.
+            </p>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm text-slate-300">업로드 파일 (PDF/텍스트)</label>
+                <input
+                  type="file"
+                  accept=".pdf,.txt,.md,.json,.csv"
+                  className="w-full rounded-lg border border-slate-600 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
+                />
+                <p className="text-xs text-slate-500">
+                  {uploadFile ? `${uploadFile.name} (${formatBytes(uploadFile.size)})` : '선택된 파일이 없습니다.'}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm text-slate-300">학과 (선택)</label>
+                <input
+                  type="text"
+                  value={uploadDepartment}
+                  onChange={(e) => setUploadDepartment(e.target.value)}
+                  placeholder="예: nursing"
+                  className="w-full rounded-lg border border-slate-600 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <label className="text-sm text-slate-300">출처/과목 (선택)</label>
+                <input
+                  type="text"
+                  value={uploadCourse}
+                  onChange={(e) => setUploadCourse(e.target.value)}
+                  placeholder="예: 해부생리학"
+                  className="w-full rounded-lg border border-slate-600 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <label className="inline-flex items-center space-x-2 text-sm text-slate-300">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-indigo-500 focus:ring-indigo-500"
+                    checked={uploadAutoBuild}
+                    onChange={(e) => setUploadAutoBuild(e.target.checked)}
+                  />
+                  <span>업로드 후 인덱스 자동 재빌드</span>
+                </label>
+              </div>
+            </div>
+            {uploadError && <p className="text-sm text-rose-400">{uploadError}</p>}
+            {uploadMessage && <p className="text-sm text-emerald-400">{uploadMessage}</p>}
+            <button
+              onClick={handleUpload}
+              className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-sky-400 transition disabled:cursor-not-allowed disabled:bg-sky-800/60"
+              disabled={uploadLoading}
+            >
+              {uploadLoading ? '업로드 중...' : '파일 업로드'}
+            </button>
           </section>
 
           <section className="bg-slate-800/60 border border-slate-700 rounded-xl p-6 shadow-lg space-y-4">

@@ -83,8 +83,8 @@ npm run dev
 
 ## 🧠 RAG 지식베이스 운영
 
-- Python API에서 `/api/ai/rag/status`, `/api/ai/rag/ingest`, `/api/ai/rag/build`, `/api/ai/rag/query` 엔드포인트로 지식베이스를 관리할 수 있습니다.
-- 관리자 프론트엔드에서는 `/admin/rag` 페이지에서 문서 인덱싱, 인덱스 빌드, 질의 실행을 UI로 제어할 수 있습니다.
+- Python API에서 `/api/ai/rag/status`, `/api/ai/rag/ingest`, `/api/ai/rag/upload`, `/api/ai/rag/build`, `/api/ai/rag/query` 엔드포인트로 지식베이스를 관리할 수 있습니다.
+- 관리자 프론트엔드에서는 `/admin/rag` 페이지에서 텍스트/파일 업로드, 인덱스 빌드, 질의 실행을 UI로 제어할 수 있습니다.
 
 ## 📚 문서
 

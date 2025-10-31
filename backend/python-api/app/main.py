@@ -1,7 +1,8 @@
 from typing import Dict, Any, List, Optional
+from pathlib import Path
 from datetime import date
 
-from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Query, Body
+from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Query, Body, Form
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
@@ -10,6 +11,7 @@ from app.parsers.question_parser import question_parser
 from app.core.config import settings
 
 from app.ai.knowledge import ingest_questions_as_knowledge, ingest_documents_as_knowledge
+from app.utils.pdf_utils import extract_text_from_pdf
 from app.ai.generation import generate_questions
 from app.ai.chat import chat_with_ai
 from app.models.quiz import Quiz, QuizQuestion, QuizSubmission
@@ -307,6 +309,95 @@ def rag_ingest(payload: Dict[str, Any] = Body(...), db: Session = Depends(get_db
 
     build_result: Optional[Dict[str, Any]] = None
     if auto_build:
+        build_result = rag_ai.build_index(db)
+
+    status = rag_ai.get_index_status(db)
+    return {
+        "success": True,
+        "ingested": saved,
+        "index_build": build_result,
+        "status": status,
+    }
+
+
+@app.post("/api/ai/rag/upload")
+async def rag_upload(
+    file: UploadFile = File(...),
+    department: Optional[str] = Form(None),
+    course: Optional[str] = Form(None),
+    chunk_size: int = Form(800),
+    chunk_overlap: int = Form(120),
+    build_index: bool = Form(False),
+    db: Session = Depends(get_db),
+):
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="파일 이름이 필요합니다.")
+
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="빈 파일은 업로드할 수 없습니다.")
+
+    docs: List[Dict[str, Any]] = []
+    default_meta: Dict[str, Any] = {
+        "type": "uploaded",
+        "source_file": file.filename,
+    }
+    if department:
+        default_meta["department"] = department
+    if course:
+        default_meta["course"] = course
+
+    is_pdf = (file.content_type or "").lower() == "application/pdf" or file.filename.lower().endswith(".pdf")
+    if is_pdf:
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+        try:
+            tmp.write(content)
+            tmp.flush()
+            pages = extract_text_from_pdf(Path(tmp.name))
+        finally:
+            tmp.close()
+            try:
+                os.unlink(tmp.name)
+            except OSError:
+                pass
+
+        if not pages:
+            raise HTTPException(status_code=400, detail="PDF에서 텍스트를 추출하지 못했습니다.")
+
+        for idx, page_text in enumerate(pages, start=1):
+            if not page_text.strip():
+                continue
+            docs.append({
+                "text": page_text,
+                "meta": {"page": idx},
+            })
+    else:
+        try:
+            text = content.decode("utf-8", errors="ignore")
+        except Exception:
+            raise HTTPException(status_code=400, detail="텍스트 파일만 허용되거나 PDF 형식이어야 합니다.")
+        if not text.strip():
+            raise HTTPException(status_code=400, detail="텍스트가 비어 있습니다.")
+        docs.append({"text": text})
+
+    try:
+        saved = ingest_documents_as_knowledge(
+            db,
+            docs,
+            default_meta=default_meta,
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
+        )
+        db.commit()
+    except HTTPException:
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.error(f"RAG upload ingest failed: {exc}")
+        raise HTTPException(status_code=500, detail="문서 인덱싱 중 오류가 발생했습니다.")
+
+    build_result: Optional[Dict[str, Any]] = None
+    if build_index:
         build_result = rag_ai.build_index(db)
 
     status = rag_ai.get_index_status(db)

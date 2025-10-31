@@ -445,6 +445,8 @@ export interface RagIngestResponse {
   status: RagStatus;
 }
 
+export type RagUploadResponse = RagIngestResponse;
+
 // 파일 업로드 관련 타입
 export interface UploadFile {
   id: string;
