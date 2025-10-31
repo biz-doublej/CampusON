@@ -23,7 +23,7 @@ export interface ParsedResult {
 
 // 파서 API 서비스
 const USE_PROXY = process.env.NODE_ENV === 'development' && typeof window !== 'undefined' && !process.env.NEXT_PUBLIC_PARSER_API_URL;
-const PARSER_API_URL = USE_PROXY ? '/parser' : (process.env.NEXT_PUBLIC_PARSER_API_URL || 'http://127.0.0.1:8001');
+export const PARSER_API_URL = USE_PROXY ? '/parser' : (process.env.NEXT_PUBLIC_PARSER_API_URL || 'http://127.0.0.1:8001');
 
 export const parserService = {
   /**

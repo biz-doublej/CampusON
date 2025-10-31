@@ -28,6 +28,7 @@ import {
 } from '../types';
 import { getApiUrl } from '../utils/config';
 import type { ParsedQuestion, ParsedResult } from './parserService';
+import { PARSER_API_URL } from './parserService';
 
 // Dynamic API base URL from configuration
 const API_BASE_URL = getApiUrl();
@@ -35,6 +36,14 @@ const API_BASE_URL = getApiUrl();
 // Axios 인스턴스 생성
 const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+const ragClient = axios.create({
+  baseURL: PARSER_API_URL,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -215,15 +224,15 @@ export const adminAPI = {
 // RAG Management API
 export const ragAPI = {
   getStatus: async (): Promise<{ success: boolean; status: RagStatus }> => {
-    const response = await api.get('/api/ai/rag/status');
+    const response = await ragClient.get('/api/ai/rag/status');
     return response.data;
   },
   buildIndex: async (): Promise<RagBuildResponse> => {
-    const response = await api.post('/api/ai/rag/build');
+    const response = await ragClient.post('/api/ai/rag/build');
     return response.data;
   },
   query: async (query: string, topK = 5): Promise<RagQueryResponse> => {
-    const response = await api.post('/api/ai/rag/query', { query, top_k: topK });
+    const response = await ragClient.post('/api/ai/rag/query', { query, top_k: topK });
     return response.data;
   },
   ingestDocuments: async (
@@ -242,7 +251,7 @@ export const ragAPI = {
       default_meta: options?.defaultMeta,
       build_index: options?.buildIndex ?? false,
     };
-    const response = await api.post('/api/ai/rag/ingest', payload);
+    const response = await ragClient.post('/api/ai/rag/ingest', payload);
     return response.data;
   },
 };
