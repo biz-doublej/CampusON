@@ -15,6 +15,23 @@ import type {
   ActivityHeatmapPoint,
 } from '../../src/types';
 import { adminAPI } from '../../src/services/api';
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip as RechartsTooltip,
+  Legend,
+  BarChart,
+  Bar,
+  Cell,
+  ComposedChart,
+  Line as RechartsLine,
+  ScatterChart,
+  Scatter,
+} from 'recharts';
 
 type LineDatum = { label: string; value: number };
 
@@ -84,78 +101,42 @@ const ChartCard: React.FC<{ title: string; description?: string; children: React
   </div>
 );
 
-const LineChart: React.FC<{ data: LineDatum[]; color?: string; height?: number; minHeight?: number }> = ({
+const ChartPlaceholder: React.FC<{ message?: string }> = ({ message }) => (
+  <p className="text-sm text-slate-400">{message ?? '데이터가 부족합니다.'}</p>
+);
+
+const LineChart: React.FC<{ data: LineDatum[]; color?: string; height?: number }> = ({
   data,
   color = '#6366f1',
   height = 220,
-  minHeight = 120,
 }) => {
   if (!data.length) {
-    return <p className="text-sm text-slate-400">데이터가 부족합니다.</p>;
+    return <ChartPlaceholder />;
   }
   if (data.length === 1) {
-    return <p className="text-sm text-slate-400">추세를 표시하려면 최소 2개 이상의 데이터가 필요합니다.</p>;
+    return <ChartPlaceholder message="추세를 표시하려면 최소 2개 이상의 데이터가 필요합니다." />;
   }
-  const width = 640;
-  const chartHeight = Math.max(height, minHeight);
-  const margin = 32;
-  const innerWidth = width - margin * 2;
-  const innerHeight = chartHeight - margin * 2;
-  const values = data.map((d) => d.value);
-  const max = Math.max(...values);
-  const min = Math.min(...values);
-  const range = max - min || 1;
-  const points = data.map((d, idx) => {
-    const x = margin + (innerWidth * idx) / (data.length - 1 || 1);
-    const norm = (d.value - min) / range;
-    const y = margin + innerHeight - norm * innerHeight;
-    return { x, y, label: d.label, value: d.value };
-  });
-  const path = points.map((p) => `${p.x},${p.y}`).join(' ');
-  const areaPath = `${points[0].x},${chartHeight - margin} ${path} ${points[points.length - 1].x},${chartHeight - margin}`;
-  const gridLines = 4;
-
+  const gradientId = `gradient-${color.replace(/[^a-zA-Z0-9]/g, '')}`;
   return (
-    <div className="w-full overflow-hidden">
-      <svg viewBox={`0 0 ${width} ${chartHeight}`} className="w-full">
-        {[...Array(gridLines + 1)].map((_, idx) => {
-          const y = margin + (innerHeight * idx) / gridLines;
-          return (
-            <line
-              key={`grid-${idx}`}
-              x1={margin}
-              y1={y}
-              x2={width - margin}
-              y2={y}
-              stroke="rgba(148, 163, 184, 0.1)"
-              strokeWidth={1}
-            />
-          );
-        })}
-        <polyline
-          points={areaPath}
-          fill={`${color}20`}
-          stroke="none"
-        />
-        <polyline
-          points={path}
-          fill="none"
-          stroke={color}
-          strokeWidth={2.5}
-          strokeLinejoin="round"
-          strokeLinecap="round"
-        />
-        {points.map((point, idx) => (
-          <g key={`point-${idx}`}>
-            <circle cx={point.x} cy={point.y} r={3.5} fill={color} />
-          </g>
-        ))}
-      </svg>
-      <div className="mt-3 flex justify-between text-xs text-slate-400">
-        {data.filter((_, idx) => idx === 0 || idx === Math.floor(data.length / 2) || idx === data.length - 1).map((d, idx) => (
-          <span key={`${d.label}-${idx}`}>{d.label}</span>
-        ))}
-      </div>
+    <div style={{ width: '100%', height }}>
+      <ResponsiveContainer>
+        <AreaChart data={data} margin={{ top: 12, right: 16, left: 0, bottom: 0 }}>
+          <defs>
+            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={color} stopOpacity={0.35} />
+              <stop offset="95%" stopColor={color} stopOpacity={0.05} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
+          <XAxis dataKey="label" stroke="#94a3b8" />
+          <YAxis stroke="#94a3b8" allowDecimals={false} />
+          <RechartsTooltip
+            contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '0.5rem' }}
+            labelStyle={{ color: '#e2e8f0' }}
+          />
+          <Area type="monotone" dataKey="value" stroke={color} fill={`url(#${gradientId})`} strokeWidth={2} />
+        </AreaChart>
+      </ResponsiveContainer>
     </div>
   );
 };
@@ -163,47 +144,25 @@ const LineChart: React.FC<{ data: LineDatum[]; color?: string; height?: number; 
 const VerticalBarChart: React.FC<{ data: LineDatum[]; color?: string; height?: number }> = ({
   data,
   color = '#22d3ee',
-  height = 220,
+  height = 240,
 }) => {
   if (!data.length) {
-    return <p className="text-sm text-slate-400">데이터가 부족합니다.</p>;
+    return <ChartPlaceholder />;
   }
-  const width = 640;
-  const margin = 32;
-  const innerWidth = width - margin * 2;
-  const innerHeight = height - margin * 2;
-  const max = Math.max(...data.map((d) => d.value), 1);
-  const barWidth = Math.max(innerWidth / data.length - 16, 18);
-
   return (
-    <div className="w-full overflow-hidden">
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full">
-        {data.map((d, idx) => {
-          const barHeight = (Math.max(d.value, 0) / max) * innerHeight;
-          const x = margin + idx * (barWidth + 16);
-          const y = height - margin - barHeight;
-          return (
-            <g key={d.label}>
-              <rect
-                x={x}
-                y={y}
-                width={barWidth}
-                height={barHeight}
-                rx={6}
-                fill={color}
-                className="opacity-80 hover:opacity-100 transition-opacity"
-              />
-            </g>
-          );
-        })}
-      </svg>
-      <div className="mt-3 flex justify-between text-xs text-slate-400">
-        {data.map((d) => (
-          <span key={d.label} className="w-full text-center">
-            {d.label}
-          </span>
-        ))}
-      </div>
+    <div style={{ width: '100%', height }}>
+      <ResponsiveContainer>
+        <BarChart data={data} margin={{ top: 12, right: 16, left: 0, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
+          <XAxis dataKey="label" stroke="#94a3b8" />
+          <YAxis stroke="#94a3b8" allowDecimals={false} />
+          <RechartsTooltip
+            contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '0.5rem' }}
+            labelStyle={{ color: '#e2e8f0' }}
+          />
+          <Bar dataKey="value" fill={color} radius={[8, 8, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
     </div>
   );
 };
@@ -214,66 +173,98 @@ const HorizontalBarList: React.FC<{ data: LineDatum[]; unit?: string; color?: st
   color = '#34d399',
 }) => {
   if (!data.length) {
-    return <p className="text-sm text-slate-400">데이터가 부족합니다.</p>;
+    return <ChartPlaceholder />;
   }
-  const max = Math.max(...data.map((d) => d.value), 1);
+  const valueLabel = (value: number) => `${value.toLocaleString()}${unit}`;
   return (
-    <div className="space-y-3">
-      {data.map((d) => {
-        const ratio = Math.max(d.value / max, 0.02);
-        return (
-          <div key={d.label} className="space-y-1.5">
-            <div className="flex justify-between text-xs text-slate-400">
-              <span>{d.label}</span>
-              <span>
-                {d.value.toLocaleString()}
-                {unit}
-              </span>
-            </div>
-            <div className="h-2.5 rounded-full bg-slate-800">
-              <div
-                className="h-2.5 rounded-full"
-                style={{ width: `${ratio * 100}%`, background: color }}
-              />
-            </div>
-          </div>
-        );
-      })}
+    <div style={{ width: '100%', height: Math.max(140, data.length * 48) }}>
+      <ResponsiveContainer>
+        <BarChart
+          data={data}
+          layout="vertical"
+          margin={{ top: 10, right: 16, left: 40, bottom: 10 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
+          <XAxis type="number" stroke="#94a3b8" allowDecimals={false} />
+          <YAxis type="category" dataKey="label" stroke="#94a3b8" width={120} />
+          <RechartsTooltip
+            formatter={(value: number) => valueLabel(value)}
+            contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '0.5rem' }}
+            labelStyle={{ color: '#e2e8f0' }}
+          />
+          <Bar dataKey="value" fill={color} radius={[0, 8, 8, 0]}>
+            {data.map((_, idx) => (
+              <Cell key={`practice-cell-${idx}`} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
     </div>
   );
 };
 
 const HeatmapGrid: React.FC<{ data: { date: Date; value: number }[] }> = ({ data }) => {
   if (!data.length) {
-    return <p className="text-sm text-slate-400">최근 활동 데이터가 부족합니다.</p>;
+    return <ChartPlaceholder message="최근 활동 데이터가 부족합니다." />;
   }
-  const max = Math.max(...data.map((d) => d.value), 1);
-  const weeks: { date: Date; value: number }[][] = [];
-  for (let i = 0; i < data.length; i += 7) {
-    weeks.push(data.slice(i, i + 7));
-  }
+  const chartData = data.map((item, index) => ({
+    week: Math.floor(index / 7),
+    dayIndex: item.date.getDay(),
+    label: format(item.date, 'MM/dd'),
+    value: item.value,
+  }));
+  const max = Math.max(...chartData.map((d) => d.value), 1);
+  const weekMax = Math.max(...chartData.map((d) => d.week), 0);
+  const dayLabels = ['일', '월', '화', '수', '목', '금', '토'];
 
   const colorForValue = (value: number) => {
-    if (value <= 0) return 'rgba(30, 41, 59, 0.8)';
+    if (value <= 0) return '#1e293b';
     const intensity = Math.min(value / max, 1);
-    const alpha = 0.2 + intensity * 0.75;
+    const alpha = 0.25 + intensity * 0.6;
     return `rgba(99, 102, 241, ${alpha.toFixed(2)})`;
   };
 
   return (
-    <div className="flex gap-1">
-      {weeks.map((week, idx) => (
-        <div key={`week-${idx}`} className="flex flex-col gap-1">
-          {week.map((day) => (
-            <div
-              key={day.date.toISOString()}
-              className="h-8 w-8 rounded-md border border-slate-800 transition-transform hover:-translate-y-0.5"
-              style={{ backgroundColor: colorForValue(day.value) }}
-              title={`${format(day.date, 'MM월 dd일')} • ${day.value.toLocaleString()}건`}
-            />
-          ))}
-        </div>
-      ))}
+    <div style={{ width: '100%', height: 260 }}>
+      <ResponsiveContainer>
+        <ScatterChart margin={{ top: 12, right: 16, bottom: 24, left: 16 }}>
+          <CartesianGrid stroke="#1f2937" />
+          <XAxis
+            type="number"
+            dataKey="week"
+            domain={[0, weekMax]}
+            tickFormatter={(value) => `${Number(value) + 1}주`}
+            stroke="#94a3b8"
+            allowDecimals={false}
+          />
+          <YAxis
+            type="number"
+            dataKey="dayIndex"
+            domain={[0, 6]}
+            tickFormatter={(value) => dayLabels[Number(value)] || ''}
+            stroke="#94a3b8"
+            allowDecimals={false}
+          />
+          <RechartsTooltip
+            cursor={{ stroke: '#475569' }}
+            content={({ payload }) => {
+              if (!payload || !payload.length) return null;
+              const item = payload[0].payload;
+              return (
+                <div className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-100">
+                  <p>{item.label}</p>
+                  <p className="text-slate-400">{item.value.toLocaleString()}건</p>
+                </div>
+              );
+            }}
+          />
+          <Scatter data={chartData} shape="square" size={28}>
+            {chartData.map((entry, idx) => (
+              <Cell key={`heatmap-cell-${idx}`} fill={colorForValue(entry.value)} />
+            ))}
+          </Scatter>
+        </ScatterChart>
+      </ResponsiveContainer>
     </div>
   );
 };
@@ -347,6 +338,20 @@ const AdminDashboard: React.FC = () => {
       })
       .sort((a, b) => (a.label > b.label ? 1 : -1));
   }, [analytics]);
+
+  const assignmentTrendChartData = useMemo(() => {
+    if (!assignmentSubmissionSeries.length && !assignmentScoreSeries.length) return [];
+    const map = new Map<string, { label: string; submissions: number; average: number }>();
+    assignmentSubmissionSeries.forEach((item) => {
+      map.set(item.label, { label: item.label, submissions: item.value, average: 0 });
+    });
+    assignmentScoreSeries.forEach((item) => {
+      const existing = map.get(item.label) || { label: item.label, submissions: 0, average: 0 };
+      existing.average = item.value;
+      map.set(item.label, existing);
+    });
+    return Array.from(map.values()).sort((a, b) => (a.label > b.label ? 1 : -1));
+  }, [assignmentSubmissionSeries, assignmentScoreSeries]);
 
   const departmentBars = useMemo<LineDatum[]>(() => {
     if (!analytics?.departmentPerformance?.length) return [];
@@ -502,10 +507,35 @@ const AdminDashboard: React.FC = () => {
             </ChartCard>
 
             <ChartCard title="과제 제출 및 평균 점수" description="최근 12주 시험 제출량과 평균 점수">
-              <LineChart data={assignmentSubmissionSeries} color="#34d399" height={200} />
-              <div className="mt-6">
-                <LineChart data={assignmentScoreSeries} color="#fbbf24" height={200} />
-              </div>
+              {assignmentTrendChartData.length ? (
+                <div style={{ width: '100%', height: 260 }}>
+                  <ResponsiveContainer>
+                    <ComposedChart data={assignmentTrendChartData} margin={{ top: 12, right: 16, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
+                      <XAxis dataKey="label" stroke="#94a3b8" />
+                      <YAxis yAxisId="left" stroke="#94a3b8" allowDecimals={false} />
+                      <YAxis yAxisId="right" orientation="right" stroke="#fbbf24" allowDecimals={false} />
+                      <RechartsTooltip
+                        contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '0.5rem' }}
+                        labelStyle={{ color: '#e2e8f0' }}
+                      />
+                      <Legend />
+                      <Bar yAxisId="left" dataKey="submissions" name="제출 수" fill="#34d399" radius={[4, 4, 0, 0]} />
+                      <RechartsLine
+                        yAxisId="right"
+                        type="monotone"
+                        dataKey="average"
+                        name="평균 점수"
+                        stroke="#fbbf24"
+                        strokeWidth={2}
+                        dot={{ r: 3 }}
+                      />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <ChartPlaceholder />
+              )}
             </ChartCard>
 
             <ChartCard title="학과별 성취도" description="시험 평균 점수 상위 학과">
