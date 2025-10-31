@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import { ragAPI } from '../../src/services/api';
 import type { RagStatus, RagQueryResult } from '../../src/types';
+import { DEPARTMENT_OPTIONS } from '../../src/config/departments';
 
 const formatBytes = (value: number) => {
   if (!value || value <= 0) return '0 B';
@@ -259,13 +260,18 @@ const AdminRagPage = () => {
               </div>
               <div className="space-y-2">
                 <label className="text-sm text-slate-300">학과 (선택)</label>
-                <input
-                  type="text"
+                <select
                   value={uploadDepartment}
                   onChange={(e) => setUploadDepartment(e.target.value)}
-                  placeholder="예: nursing"
                   className="w-full rounded-lg border border-slate-600 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
+                >
+                  <option value="">선택 안 함</option>
+                  {DEPARTMENT_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
                 <label className="text-sm text-slate-300">출처/과목 (선택)</label>
                 <input
                   type="text"

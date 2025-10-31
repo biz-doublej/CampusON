@@ -75,6 +75,17 @@ def query_index(db: Session, query: str, top_k: int = 5) -> List[Dict[str, Any]]
 
     import faiss as _faiss  # ensure available here without shadowing module-level name
     index = _faiss.read_index(INDEX_PATH)
+    # handle potential dimension mismatch (e.g., embeddings provider changed)
+    if index.d != len(qv):
+        rebuild = build_index(db)
+        if rebuild.get("success"):
+            index = _faiss.read_index(INDEX_PATH)
+        else:
+            index = None
+    if index is None or index.d != len(qv):
+        like = f"%{query}%"
+        rows = db.query(KnowledgeChunk).filter(KnowledgeChunk.text.ilike(like)).order_by(KnowledgeChunk.id.desc()).limit(top_k).all()
+        return [{"text": r.text, "meta": r.meta, "score": None} for r in rows]
     with open(IDS_PATH, 'r', encoding='utf-8') as f:
         ids = json.load(f)
     v = np.array(qv, dtype=np.float32)

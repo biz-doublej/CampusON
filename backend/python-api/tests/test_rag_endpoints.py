@@ -207,3 +207,26 @@ def test_rag_upload_text_file(client):
     assert body["success"] is True
     assert body["ingested"] >= 1
     assert body["status"]["total_chunks"] >= 1
+
+
+@pytest.mark.usefixtures("deterministic_embeddings", "fake_faiss")
+def test_rag_query_dimension_mismatch_triggers_rebuild(client, monkeypatch):
+    docs = [
+        {"text": "간호학과 실습 체계"},
+    ]
+    ingest_resp = client.post("/api/ai/rag/ingest", json={"documents": docs, "build_index": True})
+    assert ingest_resp.status_code == 200
+    assert ingest_resp.json()["success"] is True
+
+    def _embed_mismatch(text, model_type=None, model_name=None):
+        length = len(str(text).encode("utf-8"))
+        return [float((length % 7) + 1), float((length % 11) + 2), float((length % 13) + 3), 0.5]
+
+    monkeypatch.setattr("app.utils.embedding_utils.create_embedding", _embed_mismatch)
+
+    query_resp = client.post("/api/ai/rag/query", json={"query": "실습", "top_k": 2})
+    assert query_resp.status_code == 200
+    payload = query_resp.json()
+    assert payload["success"] is True
+    assert payload["results"]
+    assert payload["results"][0]["score"] is None
