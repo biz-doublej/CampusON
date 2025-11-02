@@ -129,6 +129,13 @@ const PhysicalTherapyDashboard: React.FC = () => {
               <div className="text-lg font-semibold mb-1">질문</div>
               <div className="text-sm text-gray-600">해부생리 교재 기반으로 질문하기</div>
             </button>
+            <button
+              onClick={() => router.push('/student/diagnostic?department=physical_therapy')}
+              className="bg-white border hover:bg-gray-50 rounded-lg p-4 text-left"
+            >
+              <div className="text-lg font-semibold mb-1">진단 테스트</div>
+              <div className="text-sm text-gray-600">학과 진단 테스트를 응시하고 학습 상태를 확인하세요.</div>
+            </button>
           </div>
         </main>
       </div>

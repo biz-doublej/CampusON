@@ -193,6 +193,74 @@ export interface Assignment {
   status: 'draft' | 'published' | 'closed';
 }
 
+export interface DiagnosticTestSummary {
+  test_id: string;
+  title: string;
+  description?: string;
+  department: Department | string;
+  status?: 'open' | 'scheduled' | 'closed';
+  time_limit_minutes?: number | null;
+  total_questions?: number | null;
+  open_at?: string | null;
+  close_at?: string | null;
+  created_at?: string | null;
+}
+
+export interface DiagnosticQuestionOptionMap {
+  [key: string]: string;
+}
+
+export interface DiagnosticQuestion {
+  id: string;
+  prompt: string;
+  explanation?: string | null;
+  options: DiagnosticQuestionOptionMap;
+}
+
+export interface DiagnosticTestSessionInfo {
+  title: string;
+  department: Department | string;
+  description?: string | null;
+  time_limit?: number | null;
+  time_limit_minutes?: number | null;
+  total_questions?: number | null;
+}
+
+export interface DiagnosticTestSession {
+  test_session_id: string;
+  test_id?: string;
+  test_info: DiagnosticTestSessionInfo;
+  questions: DiagnosticQuestion[];
+}
+
+export interface DiagnosticTestResultAnswer {
+  question_id: string;
+  prompt?: string;
+  selected?: string;
+  correct_answer?: string;
+  is_correct?: boolean;
+}
+
+export interface DiagnosticTestResultSummary {
+  compressions_per_minute?: number | null;
+  average_depth?: number | null;
+  arm_angle?: number | null;
+  overall_score?: number | null;
+}
+
+export interface DiagnosticTestResult {
+  result_id: string;
+  test_id?: string;
+  test_title?: string;
+  department?: Department | string;
+  completed_at?: string;
+  score?: number | null;
+  feedback?: string[];
+  answers?: DiagnosticTestResultAnswer[];
+  summary?: DiagnosticTestResultSummary;
+  raw_metrics?: Record<string, unknown> | null;
+}
+
 export interface TestResult {
   id: string;
   user_id: string;

@@ -130,6 +130,13 @@ const NursingDashboard: React.FC = () => {
               <div className="text-lg font-semibold mb-1">과제/학업</div>
               <div className="text-sm text-gray-600">과제와 학업 일정을 확인하세요.</div>
             </button>
+            <button
+              onClick={() => router.push('/student/diagnostic?department=nursing')}
+              className="bg-white border hover:bg-gray-50 rounded-lg p-4 text-left"
+            >
+              <div className="text-lg font-semibold mb-1">진단 테스트</div>
+              <div className="text-sm text-gray-600">간호학부 진단 테스트를 바로 시작하세요.</div>
+            </button>
           </div>
         </main>
 

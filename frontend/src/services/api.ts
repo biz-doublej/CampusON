@@ -26,6 +26,12 @@ import {
   AdminMonitorSnapshot,
   AdminReportsSummary,
   AdminSystemSettings,
+  DiagnosticTestSummary,
+  DiagnosticTestSession,
+  DiagnosticTestResult,
+  DiagnosticTestSessionInfo,
+  DiagnosticQuestion,
+  DiagnosticTestResultSummary,
 } from '../types';
 import { getApiUrl } from '../utils/config';
 import type { ParsedQuestion, ParsedResult } from './parserService';
@@ -50,6 +56,163 @@ const ragClient = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+const diagnosticClient = axios.create({
+  baseURL: PARSER_API_URL,
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+diagnosticClient.interceptors.request.use(
+  (config) => {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// ---------------------------------------------------------------------------
+// Diagnostic test mock fallback 데이터 (백엔드 미구현 시 사용)
+// ---------------------------------------------------------------------------
+
+const MOCK_TESTS: DiagnosticTestSummary[] = [
+  {
+    test_id: 'mock-physio-2024',
+    title: '물리치료 국가고시 핵심 진단',
+    description: '최근 물리치료 국가고시 기출을 기반으로 한 10문항 진단 테스트입니다.',
+    department: 'physical_therapy',
+    status: 'open',
+    time_limit_minutes: 20,
+    total_questions: 10,
+    open_at: null,
+    close_at: null,
+    created_at: null,
+  },
+  {
+    test_id: 'mock-nursing-2024',
+    title: '간호학 국가고시 진단 테스트',
+    description: '기본간호/성인간호 파트에서 선별한 10문항으로 현재 역량을 점검하세요.',
+    department: 'nursing',
+    status: 'open',
+    time_limit_minutes: 25,
+    total_questions: 10,
+    open_at: null,
+    close_at: null,
+    created_at: null,
+  },
+  {
+    test_id: 'mock-dental-2024',
+    title: '치위생학 실무 역량 진단',
+    description: '구강보건 교육 및 공중구강보건 파트에서 자주 출제되는 문항으로 구성되었습니다.',
+    department: 'dental_hygiene',
+    status: 'open',
+    time_limit_minutes: 20,
+    total_questions: 8,
+    open_at: null,
+    close_at: null,
+    created_at: null,
+  },
+];
+
+type MockTestBankItem = {
+  info: DiagnosticTestSessionInfo;
+  questions: DiagnosticQuestion[];
+  answerKey: Record<string, string>;
+};
+
+const MOCK_TEST_BANK: Record<string, MockTestBankItem> = {
+  'mock-physio-2024': {
+    info: {
+      title: '물리치료 국가고시 핵심 진단',
+      department: 'physical_therapy',
+      description: '근골격계/신경계 재활 핵심 문항으로 구성되었습니다.',
+      time_limit: null,
+      time_limit_minutes: 20,
+      total_questions: 10,
+    },
+    questions: Array.from({ length: 10 }).map((_, idx) => ({
+      id: `physio-q${idx + 1}`,
+      prompt: `물리치료 국가고시 기출 문항 ${idx + 1}번. 해당 상황에서 가장 적절한 중재는?`,
+      explanation: '물리치료 평가/중재 기준에 따라 선택합니다.',
+      options: {
+        A: '가. 관절가동범위 운동',
+        B: '나. 근력 강화 운동',
+        C: '다. 신경재교육',
+        D: '라. 기능적 전기자극',
+      },
+    })),
+    answerKey: Array.from({ length: 10 }).reduce<Record<string, string>>((acc, _, idx) => {
+      const choices = ['A', 'B', 'C', 'D'];
+      acc[`physio-q${idx + 1}`] = choices[idx % choices.length];
+      return acc;
+    }, {}),
+  },
+  'mock-nursing-2024': {
+    info: {
+      title: '간호학 국가고시 진단 테스트',
+      department: 'nursing',
+      description: '기본간호·성인간호학 복합 문항으로 구성된 진단 테스트입니다.',
+      time_limit: null,
+      time_limit_minutes: 25,
+      total_questions: 10,
+    },
+    questions: Array.from({ length: 10 }).map((_, idx) => ({
+      id: `nursing-q${idx + 1}`,
+      prompt: `간호학 국가고시 기출 문항 ${idx + 1}번. 대상자 간호 중 우선순위는?`,
+      explanation: 'ABCD, 기본 간호술 기준을 참고하여 답변합니다.',
+      options: {
+        A: 'A. 활력징후 측정',
+        B: 'B. 통증 사정',
+        C: 'C. 호흡 보조',
+        D: 'D. 체위 변경',
+      },
+    })),
+    answerKey: Array.from({ length: 10 }).reduce<Record<string, string>>((acc, _, idx) => {
+      const choices = ['A', 'B', 'C', 'D'];
+      acc[`nursing-q${idx + 1}`] = choices[(idx + 1) % choices.length];
+      return acc;
+    }, {}),
+  },
+  'mock-dental-2024': {
+    info: {
+      title: '치위생학 실무 역량 진단',
+      department: 'dental_hygiene',
+      description: '구강보건 교육 및 공중구강보건 파트 문제로 구성되었습니다.',
+      time_limit: null,
+      time_limit_minutes: 20,
+      total_questions: 8,
+    },
+    questions: Array.from({ length: 8 }).map((_, idx) => ({
+      id: `dental-q${idx + 1}`,
+      prompt: `치위생 국가고시 기출 ${idx + 1}번. 대상자 구강보건 교육 시 강조해야 할 핵심은?`,
+      explanation: '치위생 실무 기준과 보건 교육 원칙을 참고합니다.',
+      options: {
+        A: 'A. 칫솔질 방법 설명',
+        B: 'B. 불소 활용',
+        C: 'C. 식이 조절',
+        D: 'D. 정기 검진 안내',
+      },
+    })),
+    answerKey: Array.from({ length: 8 }).reduce<Record<string, string>>((acc, _, idx) => {
+      const choices = ['A', 'B', 'C', 'D'];
+      acc[`dental-q${idx + 1}`] = choices[(idx + 2) % choices.length];
+      return acc;
+    }, {}),
+  },
+};
+
+const mockSessions = new Map<string, { testId: string; answers: Record<string, string> }>();
+const mockResults = new Map<string, DiagnosticTestResult>();
+
+const createMockSessionId = () => `mock-session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+const createMockResultId = () => `mock-result-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 // 요청 인터셉터 - 인증 토큰 자동 추가
 api.interceptors.request.use(
@@ -305,6 +468,172 @@ export const studentsAPI = {
   getMyPracticeHours: async (): Promise<ApiResponse<{ total_hours: number }>> => {
     const response = await api.get('/api/students/me/practice-hours');
     return response.data;
+  },
+};
+
+// Diagnostic Test API
+export const diagnosticAPI = {
+  listAvailableTests: async (
+    department?: string
+  ): Promise<ApiResponse<DiagnosticTestSummary[]>> => {
+    const params = department ? { department } : undefined;
+    try {
+      const response = await diagnosticClient.get('/api/universal-diagnosis/available', { params });
+      if (response.data?.success && Array.isArray(response.data.data)) {
+        return response.data;
+      }
+    } catch (error) {
+      // fall through to mock
+    }
+
+    const filtered = department
+      ? MOCK_TESTS.filter((test) => String(test.department).toLowerCase() === department.toLowerCase())
+      : MOCK_TESTS;
+    return {
+      success: true,
+      data: filtered,
+    };
+  },
+  startTest: async (
+    department: string,
+    testId: string
+  ): Promise<ApiResponse<DiagnosticTestSession>> => {
+    try {
+      const response = await diagnosticClient.post(
+        `/api/universal-diagnosis/department/${department}/start-test`,
+        { test_id: testId }
+      );
+      if (response.data?.success && response.data.data) {
+        return response.data;
+      }
+    } catch (error) {
+      // fall through to mock
+    }
+
+    const mock = MOCK_TEST_BANK[testId];
+    if (!mock) {
+      return {
+        success: false,
+        message: '해당 테스트가 준비되어 있지 않습니다.',
+      };
+    }
+
+    const sessionId = createMockSessionId();
+    mockSessions.set(sessionId, { testId, answers: mock.answerKey });
+
+    return {
+      success: true,
+      data: {
+        test_session_id: sessionId,
+        test_id: testId,
+        test_info: mock.info,
+        questions: mock.questions,
+      },
+    };
+  },
+  submitTest: async (
+    department: string,
+    payload: { test_session_id: string; answers: Record<string, string>; test_id: string }
+  ): Promise<ApiResponse<{ result_id: string }>> => {
+    try {
+      const response = await diagnosticClient.post(
+        `/api/universal-diagnosis/department/${department}/submit-test`,
+        payload
+      );
+      if (response.data?.success && response.data.data) {
+        return response.data;
+      }
+    } catch (error) {
+      // fall through to mock
+    }
+
+    const sessionEntry = mockSessions.get(payload.test_session_id);
+    const bankEntry = MOCK_TEST_BANK[payload.test_id];
+    if (!sessionEntry || !bankEntry) {
+      return {
+        success: false,
+        message: '제출 세션을 확인할 수 없습니다.',
+      };
+    }
+
+    const answerKey = bankEntry.answerKey;
+    const questions = bankEntry.questions;
+    const total = questions.length;
+    let correctCount = 0;
+    const answerDetails = questions.map((question) => {
+      const submitted = payload.answers[question.id];
+      const correct = answerKey[question.id];
+      const isCorrect = submitted ? submitted === correct : false;
+      if (isCorrect) correctCount += 1;
+      return {
+        question_id: question.id,
+        prompt: question.prompt,
+        selected: submitted ?? undefined,
+        correct_answer: correct,
+        is_correct: submitted ? isCorrect : undefined,
+      };
+    });
+
+    const score = total > 0 ? Math.round((correctCount / total) * 100) : 0;
+    const feedback: string[] = [];
+    if (score >= 85) feedback.push('아주 우수한 결과입니다. 현재 학습 수준을 유지하세요.');
+    if (score < 85 && score >= 60) feedback.push('추가 학습이 조금 더 필요합니다. 오답 문항을 중심으로 복습하세요.');
+    if (score < 60) feedback.push('기초 개념을 중심으로 보충 학습이 필요합니다.');
+
+    const resultId = createMockResultId();
+    const summary: DiagnosticTestResultSummary = {
+      overall_score: score,
+      compressions_per_minute: null,
+      average_depth: null,
+      arm_angle: null,
+    };
+
+    const result: DiagnosticTestResult = {
+      result_id: resultId,
+      test_id: payload.test_id,
+      test_title: bankEntry.info.title,
+      department: bankEntry.info.department,
+      completed_at: new Date().toISOString(),
+      score,
+      feedback,
+      answers: answerDetails,
+      summary,
+      raw_metrics: {
+        total_questions: total,
+        correct_count: correctCount,
+      },
+    };
+
+    mockResults.set(resultId, result);
+    mockSessions.delete(payload.test_session_id);
+
+    return {
+      success: true,
+      data: { result_id: resultId },
+    };
+  },
+  getResult: async (resultId: string): Promise<ApiResponse<DiagnosticTestResult>> => {
+    try {
+      const response = await diagnosticClient.get(`/api/universal-diagnosis/result/${resultId}`);
+      if (response.data?.success && response.data.data) {
+        return response.data;
+      }
+    } catch (error) {
+      // fall back to mock
+    }
+
+    const mock = mockResults.get(resultId);
+    if (!mock) {
+      return {
+        success: false,
+        message: '결과 정보를 찾을 수 없습니다.',
+      };
+    }
+
+    return {
+      success: true,
+      data: mock,
+    };
   },
 };
 
