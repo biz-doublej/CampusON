@@ -29,9 +29,8 @@ const TYPE_LIBRARY: Record<AssignmentType, {
     defaultSubmission: 'file',
     presetDeliverables: ['PDF 리포트 제출', '출처 및 참고 문헌 기재'],
     presetChecklist: ['파일 명명 규칙 확인', '표절 검사 보고서 첨부'],
-    defaultTags: ['리포트', '개인']
-    ,
-    suggestedInstructions: '과제 설명과 제출 형식을 명확히 적어주세요.'
+    defaultTags: ['리포트', '개인'],
+    suggestedInstructions: '과제 설명과 제출 형식을 명확히 적어주세요.',
   },
   QUIZ: {
     label: '퀴즈/평가',
@@ -104,6 +103,32 @@ const SUBMISSION_LABELS: Record<SubmissionMethod, string> = {
   lab_report: '실험 보고서 업로드',
   portfolio: '포트폴리오 공유',
   simulation: '시뮬레이션 기록',
+};
+
+const extractErrorMessage = (error: unknown, fallback: string): string => {
+  if (typeof error === 'string') {
+    return error;
+  }
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  if (typeof error === 'object' && error !== null) {
+    const maybeResponse = (error as { response?: unknown }).response;
+    if (typeof maybeResponse === 'object' && maybeResponse !== null) {
+      const responseData = (maybeResponse as { data?: unknown }).data;
+      if (typeof responseData === 'object' && responseData !== null && 'message' in responseData) {
+        const message = (responseData as { message?: unknown }).message;
+        if (typeof message === 'string' && message.trim().length > 0) {
+          return message;
+        }
+      }
+    }
+    const directMessage = (error as { message?: unknown }).message;
+    if (typeof directMessage === 'string' && directMessage.trim().length > 0) {
+      return directMessage;
+    }
+  }
+  return fallback;
 };
 
 const DEFAULT_RESOURCE: AssignmentResource = { title: '', url: '', type: 'link' };
@@ -394,8 +419,8 @@ export default function ProfessorAssignmentsPage() {
         throw new Error(res.message || '상태 변경 실패');
       }
       await loadAssignments();
-    } catch (error: any) {
-      const message = error?.response?.data?.message || error?.message || '상태 변경 중 오류가 발생했습니다.';
+    } catch (error) {
+      const message = extractErrorMessage(error, '상태 변경 중 오류가 발생했습니다.');
       alert(message);
     }
   };

@@ -51,6 +51,32 @@ const SOCIAL_PROVIDERS: Record<
 
 type FeedbackState = { type: 'success' | 'error'; text: string } | null;
 
+const extractErrorMessage = (error: unknown, fallback: string): string => {
+  if (typeof error === 'string') {
+    return error;
+  }
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  if (typeof error === 'object' && error !== null) {
+    const maybeResponse = (error as { response?: unknown }).response;
+    if (typeof maybeResponse === 'object' && maybeResponse !== null) {
+      const responseData = (maybeResponse as { data?: unknown }).data;
+      if (typeof responseData === 'object' && responseData !== null && 'message' in responseData) {
+        const message = (responseData as { message?: unknown }).message;
+        if (typeof message === 'string' && message.trim().length > 0) {
+          return message;
+        }
+      }
+    }
+    const directMessage = (error as { message?: unknown }).message;
+    if (typeof directMessage === 'string' && directMessage.trim().length > 0) {
+      return directMessage;
+    }
+  }
+  return fallback;
+};
+
 export default function ProfessorSettingsPage() {
   const parserApi = process.env.NEXT_PUBLIC_PARSER_API_URL || 'http://localhost:8001';
 
@@ -117,8 +143,8 @@ export default function ProfessorSettingsPage() {
         } else {
           setLoadError(response.message || '설정을 불러오는 데 실패했습니다.');
         }
-      } catch (error: any) {
-        setLoadError(error?.response?.data?.message || '설정을 불러오는 중 오류가 발생했습니다.');
+      } catch (error) {
+        setLoadError(extractErrorMessage(error, '설정을 불러오는 중 오류가 발생했습니다.'));
       } finally {
         setLoading(false);
       }
@@ -159,10 +185,8 @@ export default function ProfessorSettingsPage() {
       } else {
         setPreferencesError(response.message || '설정을 저장하지 못했습니다.');
       }
-    } catch (error: any) {
-      setPreferencesError(
-        error?.response?.data?.message || '설정을 저장하는 중 오류가 발생했습니다.',
-      );
+    } catch (error) {
+      setPreferencesError(extractErrorMessage(error, '설정을 저장하는 중 오류가 발생했습니다.'));
     } finally {
       setSavingPreferences(false);
     }
@@ -208,10 +232,8 @@ export default function ProfessorSettingsPage() {
       } else {
         setPasswordError(response.message || '비밀번호를 변경하지 못했습니다.');
       }
-    } catch (error: any) {
-      setPasswordError(
-        error?.response?.data?.message || '비밀번호를 변경하는 중 오류가 발생했습니다.',
-      );
+    } catch (error) {
+      setPasswordError(extractErrorMessage(error, '비밀번호를 변경하는 중 오류가 발생했습니다.'));
     } finally {
       setChangingPassword(false);
     }
@@ -287,12 +309,12 @@ export default function ProfessorSettingsPage() {
           },
         }));
       }
-    } catch (error: any) {
+    } catch (error) {
       setSocialFeedback((prev) => ({
         ...prev,
         [provider]: {
           type: 'error',
-          text: error?.response?.data?.message || '연동 변경 중 오류가 발생했습니다.',
+          text: extractErrorMessage(error, '연동 변경 중 오류가 발생했습니다.'),
         },
       }));
     } finally {

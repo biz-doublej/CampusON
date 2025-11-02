@@ -1,39 +1,45 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/router';
 import ProtectedRoute from '../../src/components/ProtectedRoute';
-import type { User, DashboardStats } from '../../src/types';
 import ChatWidget from '../../src/components/chat/ChatWidget';
 import { dashboardAPIV2 } from '../../src/services/api';
+import type { DashboardStatsResponse, ProfessorDashboardStats, User } from '../../src/types';
+
+const DEFAULT_STATS: ProfessorDashboardStats = {
+  total_students: 45,
+  total_assignments: 12,
+  pending_reviews: 8,
+  average_score: 82.5,
+  recent_activities: [],
+};
+
+const isProfessorStats = (data: DashboardStatsResponse): data is ProfessorDashboardStats => {
+  return typeof data === 'object' && data !== null && 'total_students' in data && 'pending_reviews' in data;
+};
 
 const ProfessorDashboard: React.FC = () => {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
-  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [stats, setStats] = useState<ProfessorDashboardStats | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     // 로컬 스토리지에서 사용자 정보 가져오기
     const userData = localStorage.getItem('user');
     if (userData) {
-      setUser(JSON.parse(userData));
+      try {
+        const parsed = JSON.parse(userData) as User;
+        setUser(parsed);
+      } catch {
+        // Ignore malformed local storage state
+      }
     }
 
     // TODO: 교수 대시보드 통계 API 연동
     const fetchStats = async () => {
       try {
-        // const response = await professorAPI.getStats();
-        // if (response.success) {
-        //   setStats(response.data);
-        // }
-        
-        // 임시 데이터
-        setStats({
-          total_students: 45,
-          total_assignments: 12,
-          pending_reviews: 8,
-          average_score: 82.5,
-          recent_activities: []
-        } as any);
+        setStats(DEFAULT_STATS);
       } catch (error) {
         console.error('교수 대시보드 데이터 로딩 실패:', error);
       } finally {
@@ -48,8 +54,8 @@ const ProfessorDashboard: React.FC = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const resp: any = await dashboardAPIV2.getStats();
-        if (resp?.success && resp?.data) {
+        const resp = await dashboardAPIV2.getStats();
+        if (resp.success && resp.data && isProfessorStats(resp.data)) {
           setStats(resp.data);
         }
       } catch (e) {
@@ -64,6 +70,11 @@ const ProfessorDashboard: React.FC = () => {
     localStorage.removeItem('user');
     router.push('/auth/login');
   };
+
+  const totalStudents = stats?.total_students ?? 0;
+  const totalAssignments = stats?.total_assignments ?? 0;
+  const pendingReviews = stats?.pending_reviews ?? 0;
+  const averageScore = typeof stats?.average_score === 'number' ? stats.average_score : null;
 
   if (loading) {
     return (
@@ -95,12 +106,14 @@ const ProfessorDashboard: React.FC = () => {
                   <p className="text-sm text-gray-500">교수</p>
                 </div>
                 
-                <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+                <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center overflow-hidden">
                   {user?.profile_image ? (
-                    <img
+                    <Image
                       src={user.profile_image}
                       alt="Profile"
-                      className="h-10 w-10 rounded-full"
+                      width={40}
+                      height={40}
+                      className="h-10 w-10 rounded-full object-cover"
                     />
                   ) : (
                     <span className="text-gray-600 font-medium">
@@ -139,9 +152,7 @@ const ProfessorDashboard: React.FC = () => {
                       <dt className="text-sm font-medium text-gray-500 truncate">
                         담당 학생
                       </dt>
-                      <dd className="text-lg font-medium text-gray-900">
-                        {(stats as any)?.total_students || 0}명
-                      </dd>
+                      <dd className="text-lg font-medium text-gray-900">{totalStudents}명</dd>
                     </dl>
                   </div>
                 </div>
@@ -161,9 +172,7 @@ const ProfessorDashboard: React.FC = () => {
                       <dt className="text-sm font-medium text-gray-500 truncate">
                         출제한 과제
                       </dt>
-                      <dd className="text-lg font-medium text-gray-900">
-                        {(stats as any)?.total_assignments || 0}개
-                      </dd>
+                      <dd className="text-lg font-medium text-gray-900">{totalAssignments}개</dd>
                     </dl>
                   </div>
                 </div>
@@ -183,9 +192,7 @@ const ProfessorDashboard: React.FC = () => {
                       <dt className="text-sm font-medium text-gray-500 truncate">
                         검토 대기
                       </dt>
-                      <dd className="text-lg font-medium text-gray-900">
-                        {(stats as any)?.pending_reviews || 0}건
-                      </dd>
+                      <dd className="text-lg font-medium text-gray-900">{pendingReviews}건</dd>
                     </dl>
                   </div>
                 </div>
@@ -206,7 +213,7 @@ const ProfessorDashboard: React.FC = () => {
                         평균 점수
                       </dt>
                       <dd className="text-lg font-medium text-gray-900">
-                        {(stats as any)?.average_score ? `${(stats as any).average_score.toFixed(1)}점` : 'N/A'}
+                        {averageScore !== null ? `${averageScore.toFixed(1)}점` : 'N/A'}
                       </dd>
                     </dl>
                   </div>

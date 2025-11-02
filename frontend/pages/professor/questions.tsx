@@ -1,11 +1,27 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import ProtectedRoute from '../../src/components/ProtectedRoute';
 import questionService from '../../src/services/questionService';
 import quizService from '../../src/services/quizService';
 
-type QItem = { id: number; number: number; content: string; options: Record<string, string> };
+type QItem = { id: number; number: number; content: string; options?: Record<string, string> };
+
+const isStringRecord = (value: unknown): value is Record<string, string> => {
+  if (typeof value !== 'object' || value === null) return false;
+  return Object.values(value as Record<string, unknown>).every((entry) => typeof entry === 'string');
+};
+
+const isQuestionItem = (value: unknown): value is QItem => {
+  if (typeof value !== 'object' || value === null) return false;
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.id === 'number' &&
+    typeof candidate.number === 'number' &&
+    typeof candidate.content === 'string' &&
+    (candidate.options === undefined || isStringRecord(candidate.options))
+  );
+};
 
 export default function ProfessorQuestionsPage() {
   const router = useRouter();
@@ -19,26 +35,27 @@ export default function ProfessorQuestionsPage() {
   const [offset, setOffset] = useState<number>(0);
   const [showAll, setShowAll] = useState<boolean>(false);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const effectiveLimit = showAll ? 1000 : pageSize;
       const res = await questionService.list(effectiveLimit, showAll ? 0 : offset);
-      setItems(res.items || []);
-    } catch (e: any) {
-      console.error(e);
+      const parsedItems = Array.isArray(res?.items) ? res.items.filter(isQuestionItem) : [];
+      setItems(parsedItems);
+    } catch (error) {
+      console.error(error);
       setError('문항 목록을 불러오지 못했습니다. Parser API 연결과 NEXT_PUBLIC_PARSER_API_URL 환경변수를 확인해주세요.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [offset, pageSize, showAll]);
 
   useEffect(() => {
     load();
     setSelected({});
     setPreview(null);
-  }, [offset, pageSize, showAll]);
+  }, [load]);
 
   const toggle = (id: number) => setSelected(prev => ({ ...prev, [id]: !prev[id] }));
 
@@ -70,8 +87,10 @@ export default function ProfessorQuestionsPage() {
     if (allSelected) {
       setSelected({});
     } else {
-      const next: Record<number, boolean> = {} as any;
-      items.forEach(i => { next[i.id] = true; });
+      const next = items.reduce<Record<number, boolean>>((accumulator, item) => {
+        accumulator[item.id] = true;
+        return accumulator;
+      }, {});
       setSelected(next);
     }
   };

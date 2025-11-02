@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Head from 'next/head';
 import aiService from '../../src/services/aiService';
+import type { IngestQuestion } from '../../src/types';
 
 export default function GenerateQuestionsPage() {
   const [topic, setTopic] = useState('일반');
@@ -8,13 +9,13 @@ export default function GenerateQuestionsPage() {
   const [difficulty, setDifficulty] = useState('중');
   const [subject, setSubject] = useState('물리치료학');
   const [loading, setLoading] = useState(false);
-  const [questions, setQuestions] = useState<any[]>([]);
+  const [questions, setQuestions] = useState<IngestQuestion[]>([]);
 
   const generate = async () => {
     setLoading(true);
     try {
       const res = await aiService.generateQuestions(topic, count, difficulty, subject);
-      setQuestions(res.questions || []);
+      setQuestions(res.questions ?? []);
     } catch (e) {
       console.error(e);
     } finally {
