@@ -30,9 +30,13 @@ export function saveRuntimeSettings(patch: Partial<RuntimeSettings>) {
   return next;
 }
 
-export function applyTheme(_theme?: 'light' | 'dark' | 'auto') {
-  // Theme is locked to light
+export function applyTheme(theme?: 'light' | 'dark' | 'auto') {
+  const mode = theme === 'dark' ? 'dark' : 'light';
   const root = document.documentElement;
-  root.setAttribute('data-theme', 'light');
-  root.classList.remove('dark');
+  root.setAttribute('data-theme', mode);
+  if (mode === 'dark') {
+    root.classList.add('dark');
+  } else {
+    root.classList.remove('dark');
+  }
 }

@@ -51,12 +51,13 @@ class ConfigManager {
   }
 
   private loadConfiguration(): AppConfig {
-    // Environment-based configuration
-    const isDevelopment = process.env.NODE_ENV === 'development';
-    const isProduction = process.env.NODE_ENV === 'production';
-    
     // Dynamic API base URL detection
     const apiBaseUrl = this.getApiBaseUrl();
+    const themeEnv = process.env.NEXT_PUBLIC_DEFAULT_THEME;
+    const languageEnv = process.env.NEXT_PUBLIC_DEFAULT_LANGUAGE;
+    const resolvedTheme: 'light' | 'dark' | 'auto' =
+      themeEnv === 'dark' || themeEnv === 'auto' ? themeEnv : 'light';
+    const resolvedLanguage: 'ko' | 'en' = languageEnv === 'en' ? 'en' : 'ko';
 
     return {
       apiBaseUrl,
@@ -75,8 +76,8 @@ class ConfigManager {
         enableDepartmentSpecificFeatures: true // Always enabled for CampusON
       },
       ui: {
-        theme: (process.env.NEXT_PUBLIC_DEFAULT_THEME as any) || 'light',
-        language: (process.env.NEXT_PUBLIC_DEFAULT_LANGUAGE as any) || 'ko',
+        theme: resolvedTheme,
+        language: resolvedLanguage,
         animation: process.env.NEXT_PUBLIC_ENABLE_ANIMATIONS !== 'false',
         compactMode: process.env.NEXT_PUBLIC_COMPACT_MODE === 'true'
       },
@@ -179,8 +180,11 @@ class ConfigManager {
   // Dynamic role-based endpoint generation
   public getRoleBasedEndpoint(role: string, endpoint: string): string {
     const baseUrl = this.config.apiBaseUrl;
-    const roleEndpoints = this.config.endpoints as any;
-    const roleBase = roleEndpoints[role] || '/api/general';
+    const roleKey = role as keyof ApiEndpoints;
+    const roleBase =
+      roleKey in this.config.endpoints
+        ? this.config.endpoints[roleKey]
+        : '/api/general';
     return `${baseUrl}${roleBase}/${endpoint}`;
   }
 }
