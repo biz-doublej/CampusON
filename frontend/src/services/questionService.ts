@@ -1,9 +1,10 @@
 import axios from 'axios';
+import type { IngestQuestion } from '../types';
 
 const PARSER_API_URL = process.env.NEXT_PUBLIC_PARSER_API_URL || 'http://localhost:8001';
 
 export const questionService = {
-  bulkSave: async (questions: any[]) => {
+  bulkSave: async (questions: IngestQuestion[]) => {
     const res = await axios.post(`${PARSER_API_URL}/api/questions/bulk`, { questions });
     return res.data;
   },

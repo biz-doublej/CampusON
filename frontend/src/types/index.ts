@@ -447,6 +447,20 @@ export interface RagIngestResponse {
 
 export type RagUploadResponse = RagIngestResponse;
 
+export interface IngestQuestion {
+  number?: number;
+  question_number?: number;
+  content: string;
+  description?: string | string[];
+  options?: Record<string, string>;
+  answer?: string;
+  correct_answer?: string;
+  subject?: string;
+  area_name?: string;
+  difficulty?: string;
+  year?: number;
+}
+
 // 파일 업로드 관련 타입
 export interface UploadFile {
   id: string;

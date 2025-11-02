@@ -1,9 +1,15 @@
 import axios from 'axios';
 
+interface SchoolDocumentInput {
+  text: string;
+  url?: string;
+  meta?: Record<string, unknown>;
+}
+
 const API_BASE = process.env.NEXT_PUBLIC_PARSER_API_URL || 'http://127.0.0.1:8001';
 
 export const schoolService = {
-  ingest: async (docs: { text: string; url?: string; meta?: Record<string, any> }[]) => {
+  ingest: async (docs: SchoolDocumentInput[]) => {
     const res = await axios.post(`${API_BASE}/api/school/ingest`, { docs });
     return res.data;
   },
@@ -14,4 +20,3 @@ export const schoolService = {
 };
 
 export default schoolService;
-
