@@ -61,7 +61,7 @@ export default function useChatBot(options: UseChatBotOptions = {}) {
       const answer = res?.answer || '답변을 생성하지 못했습니다.';
       setMessages(prev => [...prev, { role: 'assistant', content: answer }]);
       return;
-    } catch (e: any) {
+    } catch (e) {
       // Final safety fallback
       try {
         const res = botType === 'department'

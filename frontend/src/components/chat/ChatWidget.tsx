@@ -21,7 +21,7 @@ export default function ChatWidget({
 }: ChatWidgetProps) {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
-  const { messages, loading, send, setMessages } = useChatBot({ botType, department, course });
+  const { messages, loading, send } = useChatBot({ botType, department, course });
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -100,4 +100,3 @@ export default function ChatWidget({
     </div>
   );
 }
-

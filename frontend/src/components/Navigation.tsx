@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useRouter } from 'next/router';
 import type { NavigationItem, UserRole } from '../types';
 
@@ -9,8 +9,6 @@ interface NavigationProps {
 
 const Navigation: React.FC<NavigationProps> = ({ role, currentPath }) => {
   const router = useRouter();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
   // 권한별 네비게이션 메뉴 정의
   const getNavigationItems = (role: UserRole): NavigationItem[] => {
     switch (role) {

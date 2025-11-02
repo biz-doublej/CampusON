@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Upload, X } from 'lucide-react';
+import { Upload } from 'lucide-react';
 
 /**
  * 파일 드래그 앤 드롭 업로드 공통 컴포넌트

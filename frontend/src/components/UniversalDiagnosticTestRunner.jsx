@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Timer, 
@@ -6,7 +6,6 @@ import {
   AlertTriangle, 
   GraduationCap,
   FileText,
-  TrendingUp,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
@@ -99,33 +98,35 @@ const UniversalDiagnosticTestRunner = () => {
   }, [testData, currentQuestionIndex, answers]);
 
   // 답안 선택
-  const handleAnswerChange = (questionId, answer) => {
+  const handleAnswerChange = useCallback((questionId, answer) => {
     setAnswers(prev => ({
       ...prev,
       [questionId]: answer
     }));
-  };
+  }, []);
 
   // 다음 문제
-  const handleNextQuestion = () => {
-    if (currentQuestionIndex < testData.questions.length - 1) {
-      setCurrentQuestionIndex(prev => prev + 1);
-    }
-  };
+  const handleNextQuestion = useCallback(() => {
+    if (!testData) return;
+    setCurrentQuestionIndex(prev => {
+      if (prev < testData.questions.length - 1) {
+        return prev + 1;
+      }
+      return prev;
+    });
+  }, [testData]);
 
   // 이전 문제
-  const handlePreviousQuestion = () => {
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(prev => prev - 1);
-    }
-  };
+  const handlePreviousQuestion = useCallback(() => {
+    setCurrentQuestionIndex(prev => (prev > 0 ? prev - 1 : prev));
+  }, []);
 
   // 테스트 제출
-  const handleSubmitTest = async () => {
-    if (isSubmitting) return;
-    
+  const handleSubmitTest = useCallback(async () => {
+    if (isSubmitting || !testData) return;
+
     setIsSubmitting(true);
-    
+
     try {
       const token = localStorage.getItem('access_token');
       const response = await fetch(
@@ -138,7 +139,7 @@ const UniversalDiagnosticTestRunner = () => {
           },
           body: JSON.stringify({
             test_session_id: testData.test_session_id,
-            answers: answers
+            answers
           })
         }
       );
@@ -155,7 +156,7 @@ const UniversalDiagnosticTestRunner = () => {
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [isSubmitting, department, testData, answers, navigate]);
 
   // 시간 포맷팅
   const formatTime = (seconds) => {
