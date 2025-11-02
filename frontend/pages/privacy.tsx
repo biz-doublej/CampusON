@@ -28,7 +28,7 @@ const PrivacyPage: React.FC = () => {
               <section className="mb-8">
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">개인정보처리방침 개요</h2>
                 <p className="text-gray-700 leading-relaxed">
-                  DoubleJ(이하 "회사")는 개인정보보호법 등 관련 법령에 따라 이용자의 개인정보를 
+                  DoubleJ(이하 &quot;회사&quot;)는 개인정보보호법 등 관련 법령에 따라 이용자의 개인정보를 
                   보호하고 이와 관련한 고충을 신속하고 원활하게 처리할 수 있도록 하기 위하여 
                   다음과 같이 개인정보처리방침을 수립·공개합니다.
                 </p>

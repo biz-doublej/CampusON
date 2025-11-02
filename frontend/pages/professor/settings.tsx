@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
 import ProtectedRoute from '../../src/components/ProtectedRoute';
 import { authAPI } from '../../src/services/api';
 import type {
@@ -637,9 +638,9 @@ export default function ProfessorSettingsPage() {
                     </p>
                   </div>
                   <div className="text-sm text-gray-500">
-                    <a className="text-blue-600 hover:underline" href="/professor/generate">
+                    <Link className="text-blue-600 hover:underline" href="/professor/generate">
                       AI 문제 생성 바로가기
-                    </a>
+                    </Link>
                   </div>
                 </div>
                 <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -657,19 +658,19 @@ export default function ProfessorSettingsPage() {
                     <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">빠른 링크</p>
                     <ul className="mt-2 space-y-1 text-sm text-blue-600">
                       <li>
-                        <a className="hover:underline" href="/community">
+                        <Link className="hover:underline" href="/community">
                           커뮤니티
-                        </a>
+                        </Link>
                       </li>
                       <li>
-                        <a className="hover:underline" href="/notice-embed">
+                        <Link className="hover:underline" href="/notice-embed">
                           공지 임베드
-                        </a>
+                        </Link>
                       </li>
                       <li>
-                        <a className="hover:underline" href="/professor/assignments">
+                        <Link className="hover:underline" href="/professor/assignments">
                           과제 관리
-                        </a>
+                        </Link>
                       </li>
                     </ul>
                   </div>

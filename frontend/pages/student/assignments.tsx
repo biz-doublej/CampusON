@@ -3,19 +3,23 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import ProtectedRoute from '../../src/components/ProtectedRoute';
 import ChatWidget from '../../src/components/chat/ChatWidget';
-import type { Assignment, User } from '../../src/types';
+import type { AssignmentSummary, User } from '../../src/types';
 import { assignmentsAPI } from '../../src/services/api';
 
 export default function StudentAssignmentsPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [assignments, setAssignments] = useState<AssignmentSummary[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
 
   useEffect(() => {
     const u = localStorage.getItem('user');
     if (u) {
-      try { setUser(JSON.parse(u)); } catch {}
+      try {
+        setUser(JSON.parse(u));
+      } catch {
+        setUser(null);
+      }
     }
     // Load assignments (published)
     (async () => {
@@ -23,7 +27,7 @@ export default function StudentAssignmentsPage() {
         setLoading(true);
         const res = await assignmentsAPI.list();
         if (res.success && Array.isArray(res.data)) {
-          setAssignments(res.data as any);
+          setAssignments(res.data);
         }
       } finally {
         setLoading(false);
@@ -64,22 +68,24 @@ export default function StudentAssignmentsPage() {
                 </div>
               ) : (
                 <ul className="divide-y">
-                  {assignments.map((a) => (
-                    <li key={a.id} className="py-4 flex items-start justify-between">
+                  {assignments.map((assignment) => (
+                    <li key={assignment.id} className="py-4 flex items-start justify-between">
                       <div>
-                        <h3 className="text-base font-semibold text-gray-900">{a.title}</h3>
-                        <p className="text-sm text-gray-600 mt-1">{a.description}</p>
-                        <p className="text-xs text-gray-500 mt-2">마감일: {new Date(a.due_date).toLocaleString()}</p>
+                        <h3 className="text-base font-semibold text-gray-900">{assignment.title}</h3>
+                        <p className="text-sm text-gray-600 mt-1">{assignment.description}</p>
+                        <p className="text-xs text-gray-500 mt-2">
+                          마감일: {new Date(assignment.due_date).toLocaleString()}
+                        </p>
                       </div>
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => router.push(`/student/assignments/${a.id}`)}
+                          onClick={() => router.push(`/student/assignments/${assignment.id}`)}
                           className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm"
                         >
                           제출하기
                         </button>
                         <button
-                          onClick={() => router.push(`/student/quiz/${a.id}`)}
+                          onClick={() => router.push(`/student/quiz/${assignment.id}`)}
                           className="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded text-sm"
                         >
                           퀴즈로 시작

@@ -2,19 +2,33 @@ import React, { useState } from 'react';
 import Head from 'next/head';
 import schoolService from '../../src/services/schoolService';
 
+interface SchoolSource {
+  text?: string;
+  meta?: {
+    url?: string;
+    title?: string;
+    [key: string]: unknown;
+  };
+}
+
+interface SchoolBotResponse {
+  answer?: string;
+  sources?: SchoolSource[];
+}
+
 export default function SchoolBotPage() {
   const [q, setQ] = useState('경복대학교 셔틀버스 시간 알려줘');
   const [url, setUrl] = useState('');
   const [answer, setAnswer] = useState('');
-  const [sources, setSources] = useState<any[]>([]);
+  const [sources, setSources] = useState<SchoolSource[]>([]);
   const [loading, setLoading] = useState(false);
 
   const ask = async () => {
     setLoading(true);
     try {
-      const res = await schoolService.query(q, { top_k: 5, urls: url ? [url] : undefined });
-      setAnswer(res.answer || '');
-      setSources(res.sources || []);
+      const res: SchoolBotResponse = await schoolService.query(q, { top_k: 5, urls: url ? [url] : undefined });
+      setAnswer(res?.answer ?? '');
+      setSources(Array.isArray(res?.sources) ? res.sources : []);
     } finally {
       setLoading(false);
     }
@@ -36,12 +50,12 @@ export default function SchoolBotPage() {
               {answer}
             </div>
           )}
-          {sources && sources.length > 0 && (
+          {sources.length > 0 && (
             <div className="bg-white p-4 rounded border">
               <div className="font-semibold mb-2">참고 자료</div>
               <ul className="list-disc ml-5 text-sm text-gray-700">
-                {sources.map((s, idx) => (
-                  <li key={idx}>{s.meta?.url || (s.text?.slice(0, 60) + '…')}</li>
+                {sources.map((source, idx) => (
+                  <li key={idx}>{source.meta?.url || `${source.text?.slice(0, 60) ?? ''}…`}</li>
                 ))}
               </ul>
             </div>
@@ -51,4 +65,3 @@ export default function SchoolBotPage() {
     </>
   );
 }
-

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import ProtectedRoute from '../../src/components/ProtectedRoute';
@@ -6,9 +7,31 @@ import { usersAPI } from '../../src/services/api';
 import type { Department, User } from '../../src/types';
 import { getDepartmentInfo, normalizeDepartment } from '../../src/config/departments';
 
+type StudentRow = User & { year?: string | number };
+
+const extractErrorMessage = (error: unknown, fallback: string): string => {
+  if (typeof error === 'string') return error;
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === 'object' && error !== null) {
+    const maybeResponse = (error as { response?: unknown }).response;
+    if (typeof maybeResponse === 'object' && maybeResponse !== null) {
+      const responseData = (maybeResponse as { data?: unknown }).data;
+      if (typeof responseData === 'object' && responseData !== null && 'message' in responseData) {
+        const message = (responseData as { message?: unknown }).message;
+        if (typeof message === 'string' && message.trim().length > 0) return message;
+      }
+    }
+    const directMessage = (error as { message?: unknown }).message;
+    if (typeof directMessage === 'string' && directMessage.trim().length > 0) {
+      return directMessage;
+    }
+  }
+  return fallback;
+};
+
 export default function ProfessorStudentsPage() {
   const router = useRouter();
-  const [students, setStudents] = useState<User[]>([]);
+  const [students, setStudents] = useState<StudentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,12 +56,12 @@ export default function ProfessorStudentsPage() {
       try {
         const res = await usersAPI.getStudents(department);
         if (res.success && Array.isArray(res.data)) {
-          setStudents(res.data as any);
+          setStudents(res.data);
         } else {
           setError(res.message || '학생 목록을 불러오지 못했습니다.');
         }
-      } catch (e: any) {
-        setError(e?.response?.data?.message || '학생 목록 조회 중 오류가 발생했습니다.');
+      } catch (error) {
+        setError(extractErrorMessage(error, '학생 목록 조회 중 오류가 발생했습니다.'));
       } finally {
         setLoading(false);
       }
@@ -98,8 +121,13 @@ export default function ProfessorStudentsPage() {
                           <div className="flex items-center">
                             <div className="h-9 w-9 rounded-full bg-gray-200 overflow-hidden mr-3 flex items-center justify-center">
                               {s.profile_image ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={s.profile_image} alt={s.name} className="h-9 w-9 object-cover" />
+                                <Image
+                                  src={s.profile_image}
+                                  alt={s.name || s.user_id || '학생'}
+                                  width={36}
+                                  height={36}
+                                  className="h-9 w-9 object-cover"
+                                />
                               ) : (
                                 <span className="text-gray-600 text-sm font-medium">
                                   {(s.name || s.user_id || '?').charAt(0)}
@@ -114,7 +142,9 @@ export default function ProfessorStudentsPage() {
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-700">{s.user_id}</td>
                         <td className="px-4 py-3 text-sm text-gray-700">{s.email}</td>
-                        <td className="px-4 py-3 text-sm text-gray-700">{(s as any).year || '-'}</td>
+                        <td className="px-4 py-3 text-sm text-gray-700">
+                          {s.year != null && s.year !== '' ? String(s.year) : '-'}
+                        </td>
                         <td className="px-4 py-3 text-right">
                           <button onClick={() => router.push(`/professor/students/${s.id}`)} className="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded">상세</button>
                         </td>

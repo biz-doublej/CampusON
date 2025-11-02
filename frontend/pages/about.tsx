@@ -237,7 +237,7 @@ const AboutPage: React.FC = () => {
 
                   <div className="text-center bg-gradient-to-r from-green-600 to-blue-600 text-white p-6 rounded-lg">
                     <h4 className="text-xl font-bold mb-2">CampusON은 단순한 AI가 아니라,</h4>
-                    <p className="text-lg"><strong>"학교 전체를 연결하는 AI 허브"</strong>입니다.</p>
+                    <p className="text-lg"><strong>&quot;학교 전체를 연결하는 AI 허브&quot;</strong>입니다.</p>
                   </div>
                 </div>
               </div>

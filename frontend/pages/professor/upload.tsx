@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/router';
 import ProtectedRoute from '../../src/components/ProtectedRoute';
 import FileUploader from '../../src/components/FileUploader';
@@ -18,7 +19,6 @@ const ProfessorUploadPage: React.FC = () => {
   const [parsedResult, setParsedResult] = useState<ParsedResult | null>(null);
   const [isParsingComplete, setIsParsingComplete] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [guidelineOpen] = useState(true);
   const [status, setStatus] = useState<{ parser: { ok: boolean; url: string; version?: string }; node: { ok: boolean; url: string } }>({
     parser: { ok: false, url: process.env.NEXT_PUBLIC_PARSER_API_URL || 'http://127.0.0.1:8001' },
     node: { ok: false, url: getApiUrl() },
@@ -101,12 +101,14 @@ const ProfessorUploadPage: React.FC = () => {
                   <p className="text-sm text-gray-500">교수</p>
                 </div>
                 
-                <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+                <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center overflow-hidden">
                   {mounted && user?.profile_image ? (
-                    <img
+                    <Image
                       src={user.profile_image}
                       alt="Profile"
-                      className="h-10 w-10 rounded-full"
+                      width={40}
+                      height={40}
+                      className="h-10 w-10 rounded-full object-cover"
                     />
                   ) : (
                     <span className="text-gray-600 font-medium">
@@ -338,11 +340,12 @@ const ProfessorUploadPage: React.FC = () => {
                             };
                             const response = await parserAPI.importParsedQuestions(payload);
                             if (response.success) {
-                              const assignmentId = response.data?.assignment?.id;
-                              alert(`문제 저장 완료 (과제 ID: ${assignmentId || '신규'})`);
-                              if (assignmentId) {
-                                router.push(`/professor/assignments/${assignmentId}`);
-                              }
+                              const savedIds = response.data?.saved_question_ids ?? [];
+                              alert(
+                                savedIds.length > 0
+                                  ? `문제 저장 완료 (총 ${savedIds.length}문항)`
+                                  : '문제 저장 완료',
+                              );
                             } else {
                               alert(response.message || '문제 저장 중 오류가 발생했습니다.');
                             }
