@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import ProtectedRoute from '../../src/components/ProtectedRoute';
 import { getDepartmentInfo, normalizeDepartment, getDepartmentDashboardPath } from '../../src/config/departments';
-import type { User } from '../../src/types';
+import type { ApiResponse, AssignmentSummary, DashboardStatsResponse, User } from '../../src/types';
 import { dashboardAPIV2, assignmentsAPI, studentsAPI } from '../../src/services/api';
 
 const PhysicalTherapyDashboard: React.FC = () => {
@@ -10,35 +10,50 @@ const PhysicalTherapyDashboard: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const info = getDepartmentInfo('physical_therapy');
 
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<DashboardStatsResponse | null>(null);
   const [practiceHours, setPracticeHours] = useState<number>(0);
-  const [assignments, setAssignments] = useState<any[]>([]);
+  const [assignments, setAssignments] = useState<AssignmentSummary[]>([]);
 
   useEffect(() => {
     const userStr = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
     if (userStr) {
-      const u = JSON.parse(userStr);
-      setUser(u);
-      const depKey = u?.department ? normalizeDepartment(u.department as any) : null;
-      if (depKey && depKey !== 'physical_therapy') {
-        const path = getDepartmentDashboardPath(depKey);
-        if (router.asPath !== path) router.replace(path).catch(() => void 0);
+      try {
+        const parsedUser = JSON.parse(userStr) as User;
+        setUser(parsedUser);
+        const depKey = parsedUser?.department ? normalizeDepartment(parsedUser.department) : null;
+        if (depKey && depKey !== 'physical_therapy') {
+          const path = getDepartmentDashboardPath(depKey);
+          if (router.asPath !== path) router.replace(path).catch(() => void 0);
+        }
+      } catch {
+        // ignore invalid persisted user data
       }
     }
   }, [router]);
 
   useEffect(() => {
+    const safeFetch = async <T,>(fetcher: () => Promise<ApiResponse<T>>): Promise<ApiResponse<T>> => {
+      try {
+        return await fetcher();
+      } catch {
+        return { success: false };
+      }
+    };
+
     (async () => {
       try {
-        const [s, a, ph] = await Promise.all([
-          dashboardAPIV2.getStats().catch(() => ({ success: false } as any)),
-          assignmentsAPI.list().catch(() => ({ success: false } as any)),
-          studentsAPI.getMyPracticeHours().catch(() => ({ success: false } as any)),
+        const [statsRes, assignmentsRes, practiceRes] = await Promise.all([
+          safeFetch(() => dashboardAPIV2.getStats()),
+          safeFetch(() => assignmentsAPI.list()),
+          safeFetch(() => studentsAPI.getMyPracticeHours()),
         ]);
-        if ((s as any)?.success) setStats((s as any).data);
-        if ((a as any)?.success && Array.isArray((a as any).data)) setAssignments((a as any).data);
-        if ((ph as any)?.success) setPracticeHours((ph as any).data.total_hours || 0);
-      } catch {}
+
+        if (statsRes.success && statsRes.data) setStats(statsRes.data);
+        if (assignmentsRes.success && Array.isArray(assignmentsRes.data)) setAssignments(assignmentsRes.data);
+        if (practiceRes.success && practiceRes.data) setPracticeHours(practiceRes.data.total_hours ?? 0);
+      } catch {
+        // Swallow network errors to keep the dashboard partially hydrated.
+      }
     })();
   }, []);
 
@@ -47,10 +62,15 @@ const PhysicalTherapyDashboard: React.FC = () => {
     return assignments.filter((x) => new Date(x.due_date).getTime() > now).length;
   }, [assignments]);
 
+  const totalAssignments = stats?.total_assignments ?? 0;
+  const completedAssignments =
+    stats && 'completed_assignments' in stats ? stats.completed_assignments ?? 0 : 0;
+  const averageScore = stats && 'average_score' in stats ? Number(stats.average_score ?? 0) : 0;
+
   const quickStats = [
-    { label: '총 과제 수', value: String(stats?.total_assignments ?? 0), color: 'text-purple-600' },
-    { label: '완료된 과제/진행', value: String(stats?.completed_assignments ?? 0), color: 'text-blue-600' },
-    { label: '평균 점수', value: `${Math.round(Number(stats?.average_score ?? 0))}%`, color: 'text-green-600' },
+    { label: '총 과제 수', value: String(totalAssignments), color: 'text-purple-600' },
+    { label: '완료/다가오는 과제', value: `${completedAssignments} / ${upcomingCount}`, color: 'text-blue-600' },
+    { label: '평균 점수', value: `${Math.round(averageScore)}%`, color: 'text-green-600' },
     { label: '실습 시간', value: `${practiceHours}시간`, color: 'text-yellow-600' },
   ];
 
@@ -117,4 +137,3 @@ const PhysicalTherapyDashboard: React.FC = () => {
 };
 
 export default PhysicalTherapyDashboard;
-

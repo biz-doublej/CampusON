@@ -59,7 +59,11 @@ export default function AdminSystemSettingsPage() {
                 <Toggle label="상단 시스템 배너 표시" checked={settings.showSystemBanner !== false} onChange={(v) => update({ showSystemBanner: v })} />
                 <div>
                   <label className="text-sm text-gray-600">언어</label>
-                  <select value={settings.language || 'ko'} onChange={(e) => update({ language: e.target.value })} className="mt-1 block border rounded px-3 py-2">
+                  <select
+                    value={settings.language ?? 'ko'}
+                    onChange={(e) => update({ language: e.target.value as 'ko' | 'en' })}
+                    className="mt-1 block border rounded px-3 py-2"
+                  >
                     <option value="ko">한국어</option>
                     <option value="en">English</option>
                   </select>

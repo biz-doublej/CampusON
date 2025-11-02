@@ -490,7 +490,7 @@ export interface AdminSystemSettings {
   compactMode?: boolean;
   animation?: boolean;
   showSystemBanner?: boolean;
-  language?: string;
+  language?: 'ko' | 'en';
 }
 
 // 알림 타입

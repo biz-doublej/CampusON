@@ -2,14 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import ProtectedRoute from '../../../src/components/ProtectedRoute';
 import { getDepartmentInfo, normalizeDepartment, getDepartmentDashboardPath } from '../../../src/config/departments';
-import type { User } from '../../../src/types';
 import useChatBot, { ChatMessage } from '../../../src/components/chat/useChatBot';
 
 export default function PhysicalTherapyQA() {
   const router = useRouter();
   const info = getDepartmentInfo('physical_therapy');
-  const [user, setUser] = useState<User | null>(null);
-  const { messages, loading, send, setMessages } = useChatBot({ botType: 'department', department: 'physical_therapy', course: '해부생리학' });
+  const { messages, loading, send } = useChatBot({ botType: 'department', department: 'physical_therapy', course: '해부생리학' });
   const [input, setInput] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -17,8 +15,7 @@ export default function PhysicalTherapyQA() {
     const userStr = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
     if (userStr) {
       const u = JSON.parse(userStr);
-      setUser(u);
-      const depKey = u?.department ? normalizeDepartment(u.department as any) : null;
+      const depKey = u?.department ? normalizeDepartment(u.department) : null;
       if (depKey && depKey !== 'physical_therapy') {
         const path = getDepartmentDashboardPath(depKey);
         if (router.asPath !== path) router.replace(path).catch(() => void 0);
@@ -88,4 +85,3 @@ export default function PhysicalTherapyQA() {
     </ProtectedRoute>
   );
 }
-

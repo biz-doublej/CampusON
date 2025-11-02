@@ -4,21 +4,10 @@ import { useRouter } from 'next/router';
 import ProtectedRoute from '../../../src/components/ProtectedRoute';
 import { usersAPI } from '../../../src/services/api';
 import { communityV2Service } from '../../../src/services/communityV2Service';
-import type { User } from '../../../src/types';
+import type { User, UserGrade } from '../../../src/types';
 import { getDepartmentInfo, normalizeDepartment } from '../../../src/config/departments';
 
-interface GradeRow {
-  id: string;
-  assignment_id: string;
-  assignment_title: string;
-  score: number;
-  total_questions: number;
-  correct_answers: number;
-  time_spent: number;
-  completed_at: string;
-  status?: string;
-  due_date?: string | null;
-}
+type GradeRow = UserGrade;
 
 interface TimetableEntry {
   id: number;
@@ -32,6 +21,101 @@ interface TimetableEntry {
 }
 
 const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+
+type TimetableApiRecord = {
+  id?: number | string;
+  title?: unknown;
+  dow?: unknown;
+  day_of_week?: unknown;
+  start?: unknown;
+  time_start?: unknown;
+  end?: unknown;
+  time_end?: unknown;
+  place?: unknown;
+  location?: unknown;
+  lecture_code?: unknown;
+};
+
+type TimetableApiResponseShape = {
+  items?: unknown;
+  data?: unknown;
+};
+
+const toNumberOrNull = (value: unknown): number | null => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim().length > 0) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+};
+
+const toStringOrEmpty = (value: unknown): string => (typeof value === 'string' ? value : '');
+
+const asTimetableApiRecord = (value: unknown): TimetableApiRecord | null => {
+  if (typeof value !== 'object' || value === null) return null;
+  const record = value as Record<string, unknown>;
+  return {
+    id: record.id as TimetableApiRecord['id'],
+    title: record.title,
+    dow: record.dow,
+    day_of_week: record.day_of_week,
+    start: record.start,
+    time_start: record.time_start,
+    end: record.end,
+    time_end: record.time_end,
+    place: record.place,
+    location: record.location,
+    lecture_code: record.lecture_code,
+  };
+};
+
+const extractTimetableRecords = (payload: unknown): TimetableApiRecord[] => {
+  if (typeof payload !== 'object' || payload === null) return [];
+  const response = payload as TimetableApiResponseShape;
+  const candidates = [response.items, response.data];
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) {
+      const records = candidate
+        .map(asTimetableApiRecord)
+        .filter((record): record is TimetableApiRecord => record !== null);
+      if (records.length > 0) return records;
+    }
+  }
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) {
+      return candidate
+        .map(asTimetableApiRecord)
+        .filter((record): record is TimetableApiRecord => record !== null);
+    }
+  }
+
+  return [];
+};
+
+const mapTimetableRecords = (records: TimetableApiRecord[], userId: string): TimetableEntry[] =>
+  records.map((record, index) => {
+    const idValue = toNumberOrNull(record.id) ?? index;
+    const title = typeof record.title === 'string' && record.title.trim().length > 0 ? record.title : '미정 과목';
+    const dayValue = toNumberOrNull(record.dow ?? record.day_of_week) ?? 0;
+    const start = toStringOrEmpty(record.start ?? record.time_start);
+    const end = toStringOrEmpty(record.end ?? record.time_end);
+    const location = toStringOrEmpty(record.place ?? record.location);
+    const lectureCode = typeof record.lecture_code === 'string' && record.lecture_code.trim().length > 0 ? record.lecture_code : undefined;
+
+    return {
+      id: idValue,
+      user_id: userId,
+      title,
+      day_of_week: dayValue,
+      time_start: start,
+      time_end: end,
+      location: location || undefined,
+      lecture_code: lectureCode,
+    };
+  });
 
 export default function StudentDetailPage() {
   const router = useRouter();
@@ -52,47 +136,35 @@ export default function StudentDetailPage() {
         // 1) User detail (required)
         const ures = await usersAPI.getUser(id);
         if (!ures.success || !ures.data) throw new Error(ures.message || '학생 정보를 불러올 수 없습니다.');
-        setUser(ures.data as User);
+        setUser(ures.data);
 
         // 2) Grades (best-effort)
         try {
           const gres = await usersAPI.getUserGrades(id);
-          if (gres.success && Array.isArray(gres.data)) setGrades(gres.data as any);
+          if (gres.success && Array.isArray(gres.data)) setGrades(gres.data);
         } catch {
           // ignore grades error
         }
 
         // 3) Timetable (best-effort, Python API enforces KBU verification)
         try {
-          const uidPrimary = (ures.data as any).id;
-          const uidFallback = (ures.data as any).user_id;
-          let tRes = await communityV2Service.listTimetable(uidPrimary);
-          // community_v2 returns { success: True, items: [...] }
-          let items = Array.isArray((tRes as any)?.items) ? (tRes as any).items : Array.isArray((tRes as any)?.data) ? (tRes as any).data : [];
-          if (!Array.isArray(items) || items.length === 0) {
-            const tRes2 = await communityV2Service.listTimetable(uidFallback);
-            items = Array.isArray((tRes2 as any)?.items) ? (tRes2 as any).items : Array.isArray((tRes2 as any)?.data) ? (tRes2 as any).data : [];
+          const primaryUserId = ures.data.id;
+          const fallbackUserId = ures.data.user_id;
+          const primaryResponse = await communityV2Service.listTimetable(primaryUserId);
+          let records = extractTimetableRecords(primaryResponse);
+
+          if (records.length === 0 && fallbackUserId && fallbackUserId !== primaryUserId) {
+            const fallbackResponse = await communityV2Service.listTimetable(fallbackUserId);
+            records = extractTimetableRecords(fallbackResponse);
           }
-          if (Array.isArray(items)) {
-            // Map fields from community_v2 {id,title,dow,start,end,place}
-            const mapped = items.map((r: any) => ({
-              id: r.id,
-              user_id: uidPrimary,
-              title: r.title,
-              day_of_week: r.dow ?? r.day_of_week ?? 0,
-              time_start: r.start ?? r.time_start ?? '',
-              time_end: r.end ?? r.time_end ?? '',
-              location: r.place ?? r.location ?? '',
-              lecture_code: r.lecture_code,
-            }));
-            setTimetable(mapped);
-          }
-        } catch (e: any) {
-          // Ignore 403 (not verified) and other timetable errors
-          // Still allow page render without timetable
+
+          setTimetable(mapTimetableRecords(records, primaryUserId));
+        } catch {
+          // Ignore timetable errors to allow the rest of the page to render
         }
-      } catch (e: any) {
-        setError(e?.message || '학생 상세 조회 중 오류가 발생했습니다.');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '학생 상세 조회 중 오류가 발생했습니다.';
+        setError(message || '학생 상세 조회 중 오류가 발생했습니다.');
       } finally {
         setLoading(false);
       }
@@ -117,11 +189,18 @@ export default function StudentDetailPage() {
   const deptName = (() => {
     if (!user?.department) return '학과 미지정';
     try {
-      const dep = normalizeDepartment(user.department as any);
+      const dep = normalizeDepartment(user.department);
       return getDepartmentInfo(dep).name;
     } catch {
       return '학과 미지정';
     }
+  })();
+
+  const studentYear = (() => {
+    if (!user) return '-';
+    const withYear = user as User & { year?: string | number };
+    const yearValue = withYear.year;
+    return typeof yearValue === 'number' || typeof yearValue === 'string' ? String(yearValue) : '-';
   })();
 
   return (
@@ -144,7 +223,7 @@ export default function StudentDetailPage() {
                   <div><span className="text-gray-500">학번/ID:</span> <span className="ml-2 text-gray-900">{user.user_id}</span></div>
                   <div><span className="text-gray-500">이메일:</span> <span className="ml-2 text-gray-900">{user.email}</span></div>
                   <div><span className="text-gray-500">학과:</span> <span className="ml-2 text-gray-900">{deptName}</span></div>
-                  <div><span className="text-gray-500">학년:</span> <span className="ml-2 text-gray-900">{(user as any).year || '-'}</span></div>
+                  <div><span className="text-gray-500">학년:</span> <span className="ml-2 text-gray-900">{studentYear}</span></div>
                   <div><span className="text-gray-500">가입일:</span> <span className="ml-2 text-gray-900">{new Date(user.created_at).toLocaleString()}</span></div>
                 </div>
               </section>

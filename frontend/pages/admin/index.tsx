@@ -258,7 +258,7 @@ const HeatmapGrid: React.FC<{ data: { date: Date; value: number }[] }> = ({ data
               );
             }}
           />
-          <Scatter data={chartData} shape="square" size={28}>
+          <Scatter data={chartData} shape="square">
             {chartData.map((entry, idx) => (
               <Cell key={`heatmap-cell-${idx}`} fill={colorForValue(entry.value)} />
             ))}
