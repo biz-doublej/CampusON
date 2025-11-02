@@ -101,7 +101,7 @@ router.get('/analytics/overview', authenticateToken, async (req: Request, res: R
       scoreDistributionRaw,
       recentAssignmentsRaw,
     ] = await Promise.all([
-      prisma.$queryRaw<Array<{ period: Date; count: number }>>(Prisma.sql`
+  prisma.$queryRaw<{ period: Date; count: number }[]>(Prisma.sql`
         SELECT date_trunc('month', created_at)::date AS period,
                COUNT(*)::int AS count
         FROM users
@@ -109,7 +109,7 @@ router.get('/analytics/overview', authenticateToken, async (req: Request, res: R
         GROUP BY 1
         ORDER BY 1
       `),
-      prisma.$queryRaw<Array<{ period: Date; submissions: number; avg_score: number }>>(Prisma.sql`
+  prisma.$queryRaw<{ period: Date; submissions: number; avg_score: number }[]>(Prisma.sql`
         SELECT date_trunc('week', completed_at)::date AS period,
                COUNT(*)::int AS submissions,
                AVG(score)::numeric(10,2) AS avg_score
@@ -118,7 +118,7 @@ router.get('/analytics/overview', authenticateToken, async (req: Request, res: R
         GROUP BY 1
         ORDER BY 1
       `),
-      prisma.$queryRaw<Array<{ department: string; avg_score: number; test_count: number }>>(Prisma.sql`
+  prisma.$queryRaw<{ department: string; avg_score: number; test_count: number }[]>(Prisma.sql`
         SELECT u.department::text AS department,
                AVG(tr.score)::numeric(10,2) AS avg_score,
                COUNT(*)::int AS test_count
@@ -128,7 +128,7 @@ router.get('/analytics/overview', authenticateToken, async (req: Request, res: R
         GROUP BY u.department
         ORDER BY avg_score DESC
       `),
-      prisma.$queryRaw<Array<{ day: Date; count: number }>>(Prisma.sql`
+  prisma.$queryRaw<{ day: Date; count: number }[]>(Prisma.sql`
         SELECT date_trunc('day', timestamp)::date AS day,
                COUNT(*)::int AS count
         FROM activities
@@ -136,14 +136,14 @@ router.get('/analytics/overview', authenticateToken, async (req: Request, res: R
         GROUP BY 1
         ORDER BY 1
       `),
-      prisma.$queryRaw<Array<{ department: string; hours: number }>>(Prisma.sql`
+  prisma.$queryRaw<{ department: string; hours: number }[]>(Prisma.sql`
         SELECT department::text AS department,
                COALESCE(SUM(hours), 0)::numeric(10,2) AS hours
         FROM practical_hours
         GROUP BY department
         ORDER BY department
       `),
-      prisma.$queryRaw<Array<{ bucket: string; sort_order: number; count: number }>>(Prisma.sql`
+  prisma.$queryRaw<{ bucket: string; sort_order: number; count: number }[]>(Prisma.sql`
         SELECT bucket,
                sort_order,
                COUNT(*)::int AS count
@@ -167,7 +167,7 @@ router.get('/analytics/overview', authenticateToken, async (req: Request, res: R
         GROUP BY bucket, sort_order
         ORDER BY sort_order
       `),
-      prisma.$queryRaw<Array<{ title: string; submissions: number; avg_score: number }>>(Prisma.sql`
+  prisma.$queryRaw<{ title: string; submissions: number; avg_score: number }[]>(Prisma.sql`
         SELECT a.title AS title,
                COUNT(tr.*)::int AS submissions,
                AVG(tr.score)::numeric(10,2) AS avg_score
@@ -316,7 +316,14 @@ router.get('/monitor', authenticateToken, async (req: Request, res: Response) =>
 export default router;
 
 // In-memory settings (simple process-scoped storage)
-let SETTINGS: any = {
+type AdminRuntimeSettings = {
+  enablePdfParsing: boolean;
+  enableGlobalChat: boolean;
+  defaultTheme: 'light' | 'dark' | 'auto';
+  analytics: { enabled: boolean };
+};
+
+let SETTINGS: AdminRuntimeSettings = {
   enablePdfParsing: true,
   enableGlobalChat: true,
   defaultTheme: 'light',
@@ -336,7 +343,7 @@ router.put('/settings', authenticateToken, async (req: Request, res: Response) =
   if (!auth || String(auth.role || '').toUpperCase() !== 'ADMIN') {
     return res.status(403).json({ success: false, message: 'Forbidden' });
   }
-  const payload = req.body || {};
+  const payload: Partial<AdminRuntimeSettings> = req.body || {};
   SETTINGS = { ...SETTINGS, ...payload };
   return res.json({ success: true, data: SETTINGS });
 });
@@ -349,9 +356,9 @@ router.get('/users', authenticateToken, async (req: Request, res: Response) => {
       return res.status(403).json({ success: false, message: 'Forbidden' });
     }
     const { role, department, q } = req.query as { role?: string; department?: string; q?: string };
-    const where: any = {};
-    if (role) where.role = String(role).toUpperCase();
-    if (department) where.department = String(department).toUpperCase();
+    const where: Prisma.UserWhereInput = {};
+    if (role) where.role = String(role).toUpperCase() as Prisma.UserWhereInput['role'];
+    if (department) where.department = String(department).toUpperCase() as Prisma.UserWhereInput['department'];
     if (q) {
       where.OR = [
         { name: { contains: q as string, mode: 'insensitive' } },
@@ -379,18 +386,26 @@ router.get('/reports', authenticateToken, async (req: Request, res: Response) =>
     if (!auth || String(auth.role || '').toUpperCase() !== 'ADMIN') {
       return res.status(403).json({ success: false, message: 'Forbidden' });
     }
-    const roles = ['STUDENT', 'PROFESSOR', 'ADMIN'];
-    const roleCounts: any = {};
+    const roles = ['STUDENT', 'PROFESSOR', 'ADMIN'] as const;
+    const roleCounts: Record<(typeof roles)[number], number> = {
+      STUDENT: 0,
+      PROFESSOR: 0,
+      ADMIN: 0,
+    };
     for (const r of roles) {
-      roleCounts[r] = await prisma.user.count({ where: { role: r as any } });
+      roleCounts[r] = await prisma.user.count({ where: { role: r } });
     }
-    const departments = ['NURSING', 'DENTAL_HYGIENE', 'PHYSICAL_THERAPY'];
-    const deptCounts: any = {};
+    const departments = ['NURSING', 'DENTAL_HYGIENE', 'PHYSICAL_THERAPY'] as const;
+    const deptCounts: Record<(typeof departments)[number], number> = {
+      NURSING: 0,
+      DENTAL_HYGIENE: 0,
+      PHYSICAL_THERAPY: 0,
+    };
     for (const d of departments) {
-      deptCounts[d] = await prisma.user.count({ where: { department: d as any } });
+      deptCounts[d] = await prisma.user.count({ where: { department: d } });
     }
     // assignments per status
-    const assignmentCounts: any = {
+    const assignmentCounts: Record<'DRAFT' | 'PUBLISHED' | 'CLOSED', number> = {
       DRAFT: await prisma.assignment.count({ where: { status: 'DRAFT' } }),
       PUBLISHED: await prisma.assignment.count({ where: { status: 'PUBLISHED' } }),
       CLOSED: await prisma.assignment.count({ where: { status: 'CLOSED' } }),
