@@ -248,6 +248,14 @@ const ProfessorDashboard: React.FC = () => {
               </button>
               
               <button
+                onClick={() => router.push('/professor/diagnostic')}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg p-6 text-left transition duration-200"
+              >
+                <h3 className="text-lg font-medium mb-2">진단 테스트 관리</h3>
+                <p className="text-emerald-100">학과 진단 테스트 공개/마감 상태를 관리하세요</p>
+              </button>
+              
+              <button
                 onClick={() => router.push('/professor/analytics')}
                 className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg p-6 text-left transition duration-200"
               >

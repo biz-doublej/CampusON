@@ -217,6 +217,21 @@ const mockResults = new Map<string, DiagnosticTestResult>();
 const createMockSessionId = () => `mock-session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const createMockResultId = () => `mock-result-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
+const findMockTest = (testId: string): DiagnosticTestSummary | undefined =>
+  MOCK_TESTS.find((test) => test.test_id === testId);
+
+const updateMockTestStatus = (
+  testId: string,
+  status: DiagnosticTestSummary['status']
+): DiagnosticTestSummary | null => {
+  const target = findMockTest(testId);
+  if (target) {
+    target.status = status;
+    return target;
+  }
+  return null;
+};
+
 // 요청 인터셉터 - 인증 토큰 자동 추가
 api.interceptors.request.use(
   (config) => {
@@ -489,9 +504,31 @@ export const diagnosticAPI = {
       // fall through to mock
     }
 
+    const filtered = (department
+      ? MOCK_TESTS.filter((test) => String(test.department).toLowerCase() === department.toLowerCase())
+      : MOCK_TESTS
+    ).filter((test) => test.status === 'open');
+    return {
+      success: true,
+      data: filtered,
+    };
+  },
+  listProfessorTests: async (
+    department?: string
+  ): Promise<ApiResponse<DiagnosticTestSummary[]>> => {
+    const params = department ? { department } : undefined;
+    try {
+      const response = await diagnosticClient.get('/api/universal-diagnosis/professor/tests', { params });
+      if (response.data?.success && Array.isArray(response.data.data)) {
+        return response.data;
+      }
+    } catch (error) {
+      // fall through to mock
+    }
+
     const filtered = department
       ? MOCK_TESTS.filter((test) => String(test.department).toLowerCase() === department.toLowerCase())
-      : MOCK_TESTS;
+      : [...MOCK_TESTS];
     return {
       success: true,
       data: filtered,
@@ -514,10 +551,11 @@ export const diagnosticAPI = {
     }
 
     const mock = MOCK_TEST_BANK[testId];
-    if (!mock) {
+    const summary = findMockTest(testId);
+    if (!mock || !summary || summary.status !== 'open') {
       return {
         success: false,
-        message: '해당 테스트가 준비되어 있지 않습니다.',
+        message: '해당 테스트가 준비되어 있지 않거나 현재 시작할 수 없습니다.',
       };
     }
 
@@ -613,6 +651,34 @@ export const diagnosticAPI = {
     return {
       success: true,
       data: { result_id: resultId },
+    };
+  },
+  updateTestStatus: async (
+    testId: string,
+    status: 'open' | 'scheduled' | 'closed'
+  ): Promise<ApiResponse<DiagnosticTestSummary>> => {
+    try {
+      const response = await diagnosticClient.patch(`/api/universal-diagnosis/tests/${testId}`, {
+        status,
+      });
+      if (response.data?.success && response.data.data) {
+        return response.data;
+      }
+    } catch (error) {
+      // fall through to mock
+    }
+
+    const updated = updateMockTestStatus(testId, status);
+    if (!updated) {
+      return {
+        success: false,
+        message: '테스트 상태를 업데이트할 수 없습니다.',
+      };
+    }
+
+    return {
+      success: true,
+      data: updated,
     };
   },
   getResult: async (resultId: string): Promise<ApiResponse<DiagnosticTestResult>> => {

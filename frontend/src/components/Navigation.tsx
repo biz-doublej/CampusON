@@ -25,6 +25,7 @@ const Navigation: React.FC<NavigationProps> = ({ role, currentPath }) => {
           { name: '대시보드', href: '/professor', current: currentPath === '/professor' },
           { name: '학생 관리', href: '/professor/students', current: currentPath === '/professor/students' },
           { name: '문제 관리', href: '/professor/questions', current: currentPath === '/professor/questions' },
+          { name: '진단 테스트', href: '/professor/diagnostic', current: currentPath === '/professor/diagnostic' },
           { name: 'PDF 업로드', href: '/professor/upload', current: currentPath === '/professor/upload' },
           { name: '문제 생성', href: '/professor/generate', current: currentPath === '/professor/generate' },
           { name: '커뮤니티', href: '/community', current: currentPath === '/community' },
