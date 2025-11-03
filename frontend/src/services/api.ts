@@ -142,14 +142,15 @@ const MOCK_TEST_BANK: Record<string, MockTestBankItem> = {
       prompt: `물리치료 국가고시 기출 문항 ${idx + 1}번. 해당 상황에서 가장 적절한 중재는?`,
       explanation: '물리치료 평가/중재 기준에 따라 선택합니다.',
       options: {
-        A: '가. 관절가동범위 운동',
-        B: '나. 근력 강화 운동',
-        C: '다. 신경재교육',
-        D: '라. 기능적 전기자극',
+        A: '관절가동범위 운동',
+        B: '근력 강화 운동',
+        C: '신경재교육',
+        D: '기능적 전기자극',
+        E: '균형 및 협응 훈련',
       },
     })),
     answerKey: Array.from({ length: 10 }).reduce<Record<string, string>>((acc, _, idx) => {
-      const choices = ['A', 'B', 'C', 'D'];
+      const choices = ['A', 'B', 'C', 'D', 'E'];
       acc[`physio-q${idx + 1}`] = choices[idx % choices.length];
       return acc;
     }, {}),
@@ -168,14 +169,15 @@ const MOCK_TEST_BANK: Record<string, MockTestBankItem> = {
       prompt: `간호학 국가고시 기출 문항 ${idx + 1}번. 대상자 간호 중 우선순위는?`,
       explanation: 'ABCD, 기본 간호술 기준을 참고하여 답변합니다.',
       options: {
-        A: 'A. 활력징후 측정',
-        B: 'B. 통증 사정',
-        C: 'C. 호흡 보조',
-        D: 'D. 체위 변경',
+        A: '활력징후 측정',
+        B: '통증 사정',
+        C: '호흡 보조',
+        D: '체위 변경',
+        E: '투약 및 수액 관리',
       },
     })),
     answerKey: Array.from({ length: 10 }).reduce<Record<string, string>>((acc, _, idx) => {
-      const choices = ['A', 'B', 'C', 'D'];
+      const choices = ['A', 'B', 'C', 'D', 'E'];
       acc[`nursing-q${idx + 1}`] = choices[(idx + 1) % choices.length];
       return acc;
     }, {}),
@@ -194,14 +196,15 @@ const MOCK_TEST_BANK: Record<string, MockTestBankItem> = {
       prompt: `치위생 국가고시 기출 ${idx + 1}번. 대상자 구강보건 교육 시 강조해야 할 핵심은?`,
       explanation: '치위생 실무 기준과 보건 교육 원칙을 참고합니다.',
       options: {
-        A: 'A. 칫솔질 방법 설명',
-        B: 'B. 불소 활용',
-        C: 'C. 식이 조절',
-        D: 'D. 정기 검진 안내',
+        A: '칫솔질 방법 설명',
+        B: '불소 활용',
+        C: '식이 조절',
+        D: '정기 검진 안내',
+        E: '구강위생 보조용품 안내',
       },
     })),
     answerKey: Array.from({ length: 8 }).reduce<Record<string, string>>((acc, _, idx) => {
-      const choices = ['A', 'B', 'C', 'D'];
+      const choices = ['A', 'B', 'C', 'D', 'E'];
       acc[`dental-q${idx + 1}`] = choices[(idx + 2) % choices.length];
       return acc;
     }, {}),
